@@ -1,0 +1,43 @@
+server:
+  port: 8080
+  mode: debug # debug, release
+  read_timeout: 60s
+  write_timeout: 60s
+
+database:
+  host: localhost
+  port: 5433
+  user: chainfeed
+  password: chainfeed
+  dbname: chainfeed
+  sslmode: disable
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 5m
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 10
+
+ethereum:
+  rpc_url: https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY
+  chain_id: 1
+
+webhook:
+  secret: your-webhook-secret-here
+
+auth:
+  jwt_secret: your-jwt-secret-here
+  token_expiry: 24h
+  nonce_expiry: 5m
+  sign_message: "Welcome to ChainFeed! Sign this message to authenticate your wallet. Nonce: {nonce}"
+
+log:
+  level: info # debug, info, warn, error
+  encoding: json # json, console
+  output_paths:
+    - stdout
+    - logs/app.log

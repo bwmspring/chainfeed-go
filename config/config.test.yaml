@@ -1,0 +1,36 @@
+server:
+  port: 8080
+  mode: debug
+  read_timeout: 60s
+  write_timeout: 60s
+
+database:
+  host: localhost
+  port: 5432
+  user: test
+  password: test
+  dbname: test
+  sslmode: disable
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 5m
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 10
+
+ethereum:
+  rpc_url: https://eth-mainnet.g.alchemy.com/v2/demo
+  chain_id: 1
+
+webhook:
+  secret: test-secret
+
+log:
+  level: info
+  encoding: console
+  output_paths:
+    - stdout
