@@ -46,6 +46,7 @@ type RedisConfig struct {
 type EthereumConfig struct {
 	RPCURL  string `mapstructure:"rpc_url"`
 	ChainID int64  `mapstructure:"chain_id"`
+	Network string `mapstructure:"network"`
 }
 
 type WebhookConfig struct {
