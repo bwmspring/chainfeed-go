@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/redis/go-redis/v9"
@@ -31,23 +29,4 @@ func (r *WebhookRoutes) RegisterRoutes(router *gin.RouterGroup) {
 
 func (r *WebhookRoutes) GetHandler() *webhook.Handler {
 	return r.handler
-}
-
-type MonitoringRoutes struct {
-	webhookHandler *webhook.Handler
-}
-
-func NewMonitoringRoutes(webhookHandler *webhook.Handler) *MonitoringRoutes {
-	return &MonitoringRoutes{
-		webhookHandler: webhookHandler,
-	}
-}
-
-func (r *MonitoringRoutes) RegisterRoutes(router *gin.RouterGroup) {
-	monitoring := router.Group("/monitoring")
-	{
-		monitoring.GET("/stats", func(c *gin.Context) {
-			c.JSON(http.StatusOK, r.webhookHandler.GetStats())
-		})
-	}
 }

@@ -58,12 +58,10 @@ func (s *Server) setupRoutes() {
 	// Initialize route modules
 	apiRoutes := routes.NewAPIRoutes(s.cfg, s.logger, s.db)
 	webhookRoutes := routes.NewWebhookRoutes(s.cfg, s.logger, s.db, s.redis)
-	monitoringRoutes := routes.NewMonitoringRoutes(webhookRoutes.GetHandler())
 
 	// Register routes
 	apiRoutes.RegisterRoutes(s.router.Group(""))
 	webhookRoutes.RegisterRoutes(s.router.Group(""))
-	monitoringRoutes.RegisterRoutes(s.router.Group(""))
 }
 
 func (s *Server) healthCheck(c *gin.Context) {

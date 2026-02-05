@@ -16,7 +16,7 @@
 
 - **实时性**：通过 WebSocket 建立长连接，保证链上动态的秒级感知。
 - **可读性**：使用 AI（GPT-4o 等）自动解析复杂交易逻辑，将十六进制数据转换为自然语言摘要。
-- **聚合性**：支持以太坊、Arbitrum 等主流 L2，在一个 Feed 中监控多链活动。
+- **专注性**：聚焦以太坊主网，深度解析链上活动与交互模式。
 
 ## ✨ 规划功能（Planned Features）
 
@@ -25,7 +25,7 @@
 - 智能关注管理：地址标签、ENS 解析与批量监控。
 - 实时 Feed 流：覆盖 ETH、ERC-20 转账与 NFT（ERC-721）交易。
 - AI 交易摘要：为复杂合约交互生成简短精准的中文说明。
-- 多链数据索引：首批接入 Ethereum、Arbitrum、Base。
+- 以太坊主网深度解析：专注单链，提供最精准的链上活动监控。
 
 ### 进阶功能
 
@@ -42,7 +42,7 @@
 - **后端**：Go 1.22 + Gin，使用 goroutine 处理并发任务。
 - **前端**：Next.js 14 + TailwindCSS，响应式 Feed UI。
 - **存储/缓存**：PostgreSQL（持久化）+ Redis（Pub/Sub 与缓存）。
-- **数据源**：Moralis Streams / Alchemy Webhooks + go-ethereum（RPC 深度交互）。
+- **数据源**：Alchemy Webhooks + go-ethereum（RPC 深度交互）。
 - **智能解析**：Dify + OpenAI GPT-4o。
 
 ### 数据流（示意）
@@ -60,7 +60,7 @@ graph LR
 ## 📊 技术难点（Engineering Challenges）
 
 - **高并发下的数据一致性**：在高频 Webhook 推送场景，如何通过 Redis 队列和幂等策略保证入库顺序与准确性。
-- **多链协议解析**：抽象通用解析模板，快速兼容不同 L2 的合约差异。
+- **智能合约解析**：深度解析以太坊主网复杂合约交互，提供精准的交易语义理解。
 - **低延迟推送**：优化 WebSocket 服务端的内存与连接管理，支撑大量实时连接。
 
 ## 📅 项目路线图（Roadmap）

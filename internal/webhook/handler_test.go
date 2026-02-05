@@ -19,6 +19,7 @@ import (
 
 	"chainfeed-go/internal/config"
 	"chainfeed-go/internal/parser"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -55,7 +56,7 @@ func TestHandleAlchemy(t *testing.T) {
 	}
 
 	logger := zap.NewNop()
-	
+
 	// Use sync handler for testing
 	handler := NewSyncHandler(cfg, logger, db)
 
@@ -108,7 +109,7 @@ func TestHandleAlchemy(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 
@@ -117,7 +118,7 @@ func TestHandleAlchemy(t *testing.T) {
 
 		// Verify transaction was stored
 		var count int
-		err = db.Get(&count, "SELECT COUNT(*) FROM transactions WHERE tx_hash = ?", 
+		err = db.Get(&count, "SELECT COUNT(*) FROM transactions WHERE tx_hash = ?",
 			"0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
 		require.NoError(t, err)
 		assert.Equal(t, 1, count)
