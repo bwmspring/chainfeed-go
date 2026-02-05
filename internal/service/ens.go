@@ -62,4 +62,3 @@ func (s *ENSService) Close() {
 		s.client.Close()
 	}
 }
-

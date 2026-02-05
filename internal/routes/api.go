@@ -5,6 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
 
 	"chainfeed-go/internal/auth"
@@ -32,7 +34,7 @@ func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB) *APIRoute
 	// 初始化 services
 	web3Svc := auth.NewWeb3Service(cfg.Auth.SignMessage)
 	jwtSvc := auth.NewJWTService(cfg.Auth.JWTSecret, cfg.Auth.TokenExpiry)
-	
+
 	// 初始化 ENS service（可选）
 	var ensService *service.ENSService
 	if cfg.Ethereum.RPCURL != "" {
@@ -58,6 +60,9 @@ func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB) *APIRoute
 }
 
 func (r *APIRoutes) RegisterRoutes(router *gin.RouterGroup) {
+	// Swagger documentation
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	api := router.Group("/api/v1")
 	{
 		// Health check
@@ -96,11 +101,27 @@ func (r *APIRoutes) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 // Health check endpoint
+// @Summary      健康检查
+// @Description  检查服务是否正常运行
+// @Tags         系统
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} map[string]string
+// @Router       /ping [get]
 func (r *APIRoutes) ping(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "pong"})
 }
 
 // getUserProfile 获取用户信息
+// @Summary      获取用户信息
+// @Description  获取当前登录用户的基本信息
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]interface{}
+// @Failure      401 {object} map[string]string
+// @Router       /profile [get]
 func (r *APIRoutes) getUserProfile(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {

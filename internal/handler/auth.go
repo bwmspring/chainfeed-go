@@ -15,10 +15,10 @@ import (
 )
 
 type AuthHandler struct {
-	userRepo   *repository.UserRepository
-	web3Svc    *auth.Web3Service
-	jwtSvc     *auth.JWTService
-	logger     *zap.Logger
+	userRepo    *repository.UserRepository
+	web3Svc     *auth.Web3Service
+	jwtSvc      *auth.JWTService
+	logger      *zap.Logger
 	nonceExpiry time.Duration
 }
 
@@ -48,6 +48,16 @@ type GetNonceResponse struct {
 }
 
 // GetNonce 获取签名用的 nonce
+// @Summary      获取签名 Nonce
+// @Description  获取用于 MetaMask 签名的 nonce 和消息
+// @Tags         认证
+// @Accept       json
+// @Produce      json
+// @Param        request body GetNonceRequest true "钱包地址"
+// @Success      200 {object} GetNonceResponse
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /auth/nonce [post]
 func (h *AuthHandler) GetNonce(c *gin.Context) {
 	var req GetNonceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -110,7 +120,7 @@ func (h *AuthHandler) GetNonce(c *gin.Context) {
 
 type VerifySignatureRequest struct {
 	WalletAddress string `json:"wallet_address" binding:"required"`
-	Signature     string `json:"signature" binding:"required"`
+	Signature     string `json:"signature"      binding:"required"`
 }
 
 type VerifySignatureResponse struct {
@@ -119,6 +129,17 @@ type VerifySignatureResponse struct {
 }
 
 // VerifySignature 验证签名并返回 JWT token
+// @Summary      验证签名
+// @Description  验证 MetaMask 签名并返回 JWT token
+// @Tags         认证
+// @Accept       json
+// @Produce      json
+// @Param        request body VerifySignatureRequest true "签名信息"
+// @Success      200 {object} VerifySignatureResponse
+// @Failure      400 {object} map[string]string
+// @Failure      401 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /auth/verify [post]
 func (h *AuthHandler) VerifySignature(c *gin.Context) {
 	var req VerifySignatureRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

@@ -3,9 +3,10 @@ package database
 import (
 	"fmt"
 
+	"chainfeed-go/internal/config"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"chainfeed-go/internal/config"
 )
 
 func NewPostgres(cfg config.DatabaseConfig) (*sqlx.DB, error) {

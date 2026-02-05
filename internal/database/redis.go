@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/redis/go-redis/v9"
 	"chainfeed-go/internal/config"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func NewRedis(cfg config.RedisConfig) (*redis.Client, error) {

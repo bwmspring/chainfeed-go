@@ -41,3 +41,6 @@ logs/
 # Temporary files
 tmp/
 temp/
+
+# Swagger generated files
+docs/swagger/

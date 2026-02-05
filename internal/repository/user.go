@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/jmoiron/sqlx"
 	"chainfeed-go/internal/models"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type UserRepository struct {

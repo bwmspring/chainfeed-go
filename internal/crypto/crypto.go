@@ -59,10 +59,10 @@ func RecoverAddress(message []byte, signature []byte) (string, error) {
 func PubkeyToAddress(pubKey *ecdsa.PublicKey) string {
 	// 序列化公钥（去掉第一个字节的前缀）
 	pubBytes := append(pubKey.X.Bytes(), pubKey.Y.Bytes()...)
-	
+
 	// Keccak256 哈希
 	hash := Keccak256(pubBytes)
-	
+
 	// 取后 20 字节作为地址
 	address := "0x" + hex.EncodeToString(hash[12:])
 	return strings.ToLower(address)

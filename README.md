@@ -66,9 +66,47 @@ graph LR
 ## 📅 项目路线图（Roadmap）
 
 - [x] 阶段 1：架构设计与技术选型
-- [ ] 阶段 2：后端索引层与数据库建模（进行中）
-- [ ] 阶段 3：AI 解析引擎与 Dify 工作流集成（规划中）
-- [ ] 阶段 4：前端 UI 开发与 WebSocket 联调（规划中）
+- [x] 阶段 2：后端索引层与数据库建模
+- [x] 阶段 3：用户认证与监控地址管理
+- [ ] 阶段 4：AI 解析引擎与 Dify 工作流集成（规划中）
+- [ ] 阶段 5：前端 UI 开发与 WebSocket 联调（规划中）
+
+## 📚 API 文档
+
+项目集成了 Swagger API 文档，提供完整的接口说明和在线测试功能。
+
+### ⚠️ 当前状态
+
+由于网络问题，Swagger 依赖暂未安装，文档 UI 暂时不可用。
+
+**临时方案：**
+- 查看 API 注释：所有接口都有完整的 Swagger 注释
+- 使用文档：`docs/phase-1.3-quickstart.md` 包含所有 API 使用示例
+- 使用 curl/Postman 测试接口
+
+### 启用 Swagger（网络恢复后）
+
+```bash
+# 1. 安装 Swagger 工具
+make swagger-install
+
+# 2. 取消 internal/routes/api.go 中的注释
+
+# 3. 生成文档
+make swagger
+
+# 4. 启动服务
+make run
+
+# 5. 访问文档
+open http://localhost:8080/swagger/index.html
+```
+
+### 主要接口
+
+- **认证**：`POST /api/v1/auth/nonce`、`POST /api/v1/auth/verify`
+- **用户**：`GET /api/v1/profile`
+- **监控地址**：`GET/POST/DELETE /api/v1/addresses`
 
 ## ✉️ 联系方式
 

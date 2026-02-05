@@ -54,10 +54,10 @@ type WebhookConfig struct {
 }
 
 type AuthConfig struct {
-	JWTSecret     string        `mapstructure:"jwt_secret"`
-	TokenExpiry   time.Duration `mapstructure:"token_expiry"`
-	NonceExpiry   time.Duration `mapstructure:"nonce_expiry"`
-	SignMessage   string        `mapstructure:"sign_message"`
+	JWTSecret   string        `mapstructure:"jwt_secret"`
+	TokenExpiry time.Duration `mapstructure:"token_expiry"`
+	NonceExpiry time.Duration `mapstructure:"nonce_expiry"`
+	SignMessage string        `mapstructure:"sign_message"`
 }
 
 type LogConfig struct {

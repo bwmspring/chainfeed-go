@@ -6,7 +6,7 @@ server:
 
 database:
   host: localhost
-  port: 5433
+  port: 5432
   user: chainfeed
   password: chainfeed
   dbname: chainfeed
@@ -24,7 +24,7 @@ redis:
 
 ethereum:
   rpc_url: https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
-  chain_id: 11155111  # Sepolia testnet
+  chain_id: 11155111 # Sepolia testnet
   network: sepolia
 
 webhook:

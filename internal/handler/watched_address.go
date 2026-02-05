@@ -16,9 +16,9 @@ import (
 )
 
 type WatchedAddressHandler struct {
-	repo      *repository.WatchedAddressRepository
+	repo       *repository.WatchedAddressRepository
 	ensService *service.ENSService
-	logger    *zap.Logger
+	logger     *zap.Logger
 }
 
 func NewWatchedAddressHandler(
@@ -27,13 +27,23 @@ func NewWatchedAddressHandler(
 	logger *zap.Logger,
 ) *WatchedAddressHandler {
 	return &WatchedAddressHandler{
-		repo:      repo,
+		repo:       repo,
 		ensService: ensService,
-		logger:    logger,
+		logger:     logger,
 	}
 }
 
 // List 获取用户的监控地址列表
+// @Summary      获取监控地址列表
+// @Description  获取当前用户的所有监控地址
+// @Tags         监控地址
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string][]models.WatchedAddress
+// @Failure      401 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /addresses [get]
 func (h *WatchedAddressHandler) List(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
@@ -58,6 +68,19 @@ type AddWatchedAddressRequest struct {
 }
 
 // Add 添加监控地址
+// @Summary      添加监控地址
+// @Description  添加新的监控地址（支持以太坊地址或 ENS 域名）
+// @Tags         监控地址
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request body AddWatchedAddressRequest true "地址信息"
+// @Success      201 {object} map[string]models.WatchedAddress
+// @Failure      400 {object} map[string]string
+// @Failure      401 {object} map[string]string
+// @Failure      409 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /addresses [post]
 func (h *WatchedAddressHandler) Add(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
@@ -78,7 +101,7 @@ func (h *WatchedAddressHandler) Add(c *gin.Context) {
 	if common.IsHexAddress(req.Address) {
 		// 是以太坊地址
 		address = common.HexToAddress(req.Address).Hex()
-		
+
 		// 尝试反向解析 ENS
 		if h.ensService != nil {
 			if name, err := h.ensService.ReverseResolve(ctx, address); err == nil && name != "" {
@@ -91,7 +114,7 @@ func (h *WatchedAddressHandler) Add(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "ENS resolution not available"})
 			return
 		}
-		
+
 		resolvedAddr, err := h.ensService.Resolve(ctx, req.Address)
 		if err != nil {
 			h.logger.Warn("Failed to resolve ENS", zap.Error(err), zap.String("ens", req.Address))
@@ -133,6 +156,18 @@ func (h *WatchedAddressHandler) Add(c *gin.Context) {
 }
 
 // Remove 删除监控地址
+// @Summary      删除监控地址
+// @Description  删除指定的监控地址
+// @Tags         监控地址
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path int true "地址 ID"
+// @Success      200 {object} map[string]string
+// @Failure      400 {object} map[string]string
+// @Failure      401 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /addresses/{id} [delete]
 func (h *WatchedAddressHandler) Remove(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {

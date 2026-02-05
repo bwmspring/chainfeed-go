@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/jmoiron/sqlx"
 	"chainfeed-go/internal/models"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type TransactionRepository struct {
@@ -24,26 +25,26 @@ func (r *TransactionRepository) Create(tx *models.Transaction) error {
 			:value, :tx_type, :token_address, :token_id, :token_symbol, :token_decimals)
 		ON CONFLICT (tx_hash) DO NOTHING
 		RETURNING id, created_at`
-	
+
 	rows, err := r.db.NamedQuery(query, tx)
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)
 	}
 	defer rows.Close()
-	
+
 	if rows.Next() {
 		if err := rows.Scan(&tx.ID, &tx.CreatedAt); err != nil {
 			return fmt.Errorf("failed to scan transaction: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
 func (r *TransactionRepository) GetByHash(hash string) (*models.Transaction, error) {
 	var tx models.Transaction
 	query := `SELECT * FROM transactions WHERE tx_hash = $1`
-	
+
 	err := r.db.Get(&tx, query, hash)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -51,6 +52,6 @@ func (r *TransactionRepository) GetByHash(hash string) (*models.Transaction, err
 		}
 		return nil, fmt.Errorf("failed to get transaction: %w", err)
 	}
-	
+
 	return &tx, nil
 }

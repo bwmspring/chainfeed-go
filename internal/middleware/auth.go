@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"chainfeed-go/internal/auth"
+
+	"github.com/gin-gonic/gin"
 )
 
 func AuthMiddleware(jwtService *auth.JWTService) gin.HandlerFunc {

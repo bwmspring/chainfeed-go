@@ -6,12 +6,13 @@ import (
 	"net/http"
 	"time"
 
+	"chainfeed-go/internal/config"
+	"chainfeed-go/internal/routes"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
-	"chainfeed-go/internal/config"
-	"chainfeed-go/internal/routes"
 )
 
 type Server struct {

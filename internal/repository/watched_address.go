@@ -3,8 +3,9 @@ package repository
 import (
 	"context"
 
-	"github.com/jmoiron/sqlx"
 	"chainfeed-go/internal/models"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type WatchedAddressRepository struct {
@@ -43,16 +44,16 @@ func (r *WatchedAddressRepository) Delete(ctx context.Context, id, userID int64)
 	if err != nil {
 		return err
 	}
-	
+
 	rows, err := result.RowsAffected()
 	if err != nil {
 		return err
 	}
-	
+
 	if rows == 0 {
 		return nil // 或返回自定义错误
 	}
-	
+
 	return nil
 }
 

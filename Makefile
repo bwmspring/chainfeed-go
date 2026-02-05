@@ -1,50 +1,69 @@
-.PHONY: help build run test clean migrate-up migrate-down docker-up docker-down lint
+.PHONY: help build run test clean swagger swagger-install deps fmt imports golines format
 
 help:
-	@echo "Available commands:"
-	@echo "  make build        - Build the application"
-	@echo "  make run          - Run the application"
-	@echo "  make test         - Run tests"
-	@echo "  make clean        - Clean build artifacts"
-	@echo "  make migrate-up   - Run database migrations"
-	@echo "  make migrate-down - Rollback database migrations"
-	@echo "  make docker-up    - Start Docker services"
-	@echo "  make docker-down  - Stop Docker services"
-	@echo "  make lint         - Run linter"
+	@echo "ChainFeed - 可用命令:"
+	@echo "  make build    - 编译项目"
+	@echo "  make run      - 运行服务"
+	@echo "  make test     - 运行测试"
+	@echo "  make clean    - 清理构建文件"
+	@echo "  make deps     - 安装项目依赖"
+	@echo "  make swagger  - 生成 Swagger 文档"
+	@echo "  make dev      - 生成文档并运行服务"
+	@echo "  make fmt      - 格式化代码"
+	@echo "  make imports  - 整理 import"
+	@echo "  make golines  - 格式化长行"
+	@echo "  make format   - 完整格式化 (fmt + imports + golines)"
 
 build:
-	@echo "Building..."
 	@go build -o bin/chainfeed cmd/server/main.go
 
 run:
-	@echo "Running..."
 	@go run cmd/server/main.go
 
+dev: swagger run
+
 test:
-	@echo "Running tests..."
-	@go test -v -race -cover ./...
+	@go test -v ./...
 
 clean:
-	@echo "Cleaning..."
-	@rm -rf bin/
-	@go clean
+	@rm -rf bin/ docs/swagger/
 
-migrate-up:
-	@echo "Running migrations..."
-	@migrate -path migrations -database "postgresql://chainfeed:chainfeed@localhost:5432/chainfeed?sslmode=disable" up
+deps:
+	@export GOPROXY=https://goproxy.cn,direct && \
+	go mod download && go mod tidy
 
-migrate-down:
-	@echo "Rolling back migrations..."
-	@migrate -path migrations -database "postgresql://chainfeed:chainfeed@localhost:5432/chainfeed?sslmode=disable" down 1
+swagger-install:
+	@export GOPROXY=https://goproxy.cn,direct && \
+	go install github.com/swaggo/swag/cmd/swag@latest && \
+	go get -u github.com/swaggo/gin-swagger github.com/swaggo/files && \
+	go mod tidy
 
-docker-up:
-	@echo "Starting Docker services..."
-	@docker-compose up -d
+swagger:
+	@swag init -g cmd/server/main.go -o docs/swagger
 
-docker-down:
-	@echo "Stopping Docker services..."
-	@docker-compose down
+migrate:
+	@psql -U postgres -d chainfeed < migrations/001_create_transactions_table.sql
+	@psql -U postgres -d chainfeed < migrations/002_add_indexes.sql
+	@psql -U postgres -d chainfeed < migrations/003_create_user_tables.sql
+
+fmt:
+	@go fmt ./...
+
+imports:
+	@if ! command -v goimports &> /dev/null; then \
+		go install golang.org/x/tools/cmd/goimports@latest; \
+	fi
+	@goimports -w .
+
+golines:
+	@if ! command -v golines &> /dev/null; then \
+		go install github.com/segmentio/golines@latest; \
+	fi
+	@golines -w --max-len=120 --base-formatter=gofmt .
+
+format: fmt imports golines
 
 lint:
-	@echo "Running linter..."
-	@golangci-lint run ./...
+	@golangci-lint run
+
+install: deps swagger-install

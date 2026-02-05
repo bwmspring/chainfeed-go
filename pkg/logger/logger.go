@@ -3,9 +3,10 @@ package logger
 import (
 	"os"
 
+	"chainfeed-go/internal/config"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"chainfeed-go/internal/config"
 )
 
 func New(cfg config.LogConfig) (*zap.Logger, error) {
