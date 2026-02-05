@@ -9,12 +9,13 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
 
-	"chainfeed-go/internal/auth"
-	"chainfeed-go/internal/config"
-	"chainfeed-go/internal/handler"
-	"chainfeed-go/internal/middleware"
-	"chainfeed-go/internal/repository"
-	"chainfeed-go/internal/service"
+	"github.com/bwmspring/chainfeed-go/internal/auth"
+	"github.com/bwmspring/chainfeed-go/internal/config"
+	"github.com/bwmspring/chainfeed-go/internal/handler"
+	"github.com/bwmspring/chainfeed-go/internal/middleware"
+	"github.com/bwmspring/chainfeed-go/internal/repository"
+	"github.com/bwmspring/chainfeed-go/internal/service"
+	"github.com/bwmspring/chainfeed-go/internal/websocket"
 )
 
 type APIRoutes struct {
@@ -23,13 +24,16 @@ type APIRoutes struct {
 	db                    *sqlx.DB
 	authHandler           *handler.AuthHandler
 	watchedAddressHandler *handler.WatchedAddressHandler
+	feedHandler           *handler.FeedHandler
+	wsHandler             *handler.WebSocketHandler
 	jwtService            *auth.JWTService
 }
 
-func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB) *APIRoutes {
+func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB, hub *websocket.Hub) *APIRoutes {
 	// 初始化 repositories
 	userRepo := repository.NewUserRepository(db)
 	watchedAddrRepo := repository.NewWatchedAddressRepository(db)
+	feedRepo := repository.NewFeedRepository(db)
 
 	// 初始化 services
 	web3Svc := auth.NewWeb3Service(cfg.Auth.SignMessage)
@@ -48,6 +52,8 @@ func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB) *APIRoute
 	// 初始化 handlers
 	authHandler := handler.NewAuthHandler(userRepo, web3Svc, jwtSvc, logger, cfg.Auth.NonceExpiry)
 	watchedAddressHandler := handler.NewWatchedAddressHandler(watchedAddrRepo, ensService, logger)
+	feedHandler := handler.NewFeedHandler(feedRepo)
+	wsHandler := handler.NewWebSocketHandler(hub, logger)
 
 	return &APIRoutes{
 		cfg:                   cfg,
@@ -55,6 +61,8 @@ func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB) *APIRoute
 		db:                    db,
 		authHandler:           authHandler,
 		watchedAddressHandler: watchedAddressHandler,
+		feedHandler:           feedHandler,
+		wsHandler:             wsHandler,
 		jwtService:            jwtSvc,
 	}
 }
@@ -62,6 +70,9 @@ func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB) *APIRoute
 func (r *APIRoutes) RegisterRoutes(router *gin.RouterGroup) {
 	// Swagger documentation
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// WebSocket endpoint (with auth middleware)
+	router.GET("/ws", middleware.AuthMiddleware(r.jwtService), r.wsHandler.HandleWebSocket)
 
 	api := router.Group("/api/v1")
 	{
@@ -90,11 +101,10 @@ func (r *APIRoutes) RegisterRoutes(router *gin.RouterGroup) {
 				addresses.DELETE("/:id", r.watchedAddressHandler.Remove)
 			}
 
-			// Feed routes (placeholder)
+			// Feed routes
 			feed := protected.Group("/feed")
 			{
-				feed.GET("", r.getFeed)
-				feed.GET("/transactions/:hash", r.getTransaction)
+				feed.GET("", r.feedHandler.GetFeed)
 			}
 		}
 	}
@@ -135,13 +145,4 @@ func (r *APIRoutes) getUserProfile(c *gin.Context) {
 		"user_id":        userID,
 		"wallet_address": walletAddress,
 	})
-}
-
-// Placeholder handlers - to be implemented later
-func (r *APIRoutes) getFeed(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"message": "not implemented yet"})
-}
-
-func (r *APIRoutes) getTransaction(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"message": "not implemented yet"})
 }

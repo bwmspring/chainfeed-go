@@ -41,6 +41,7 @@ swagger-install:
 swagger:
 	@swag init -g cmd/server/main.go -o docs/swagger
 
+
 migrate:
 	@psql -U postgres -d chainfeed < migrations/001_create_transactions_table.sql
 	@psql -U postgres -d chainfeed < migrations/002_add_indexes.sql

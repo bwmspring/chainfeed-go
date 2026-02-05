@@ -3,7 +3,7 @@ package logger
 import (
 	"os"
 
-	"chainfeed-go/internal/config"
+	"github.com/bwmspring/chainfeed-go/internal/config"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

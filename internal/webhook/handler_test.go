@@ -17,8 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"chainfeed-go/internal/config"
-	"chainfeed-go/internal/parser"
+	"github.com/bwmspring/chainfeed-go/internal/config"
+	"github.com/bwmspring/chainfeed-go/internal/parser"
 
 	_ "github.com/mattn/go-sqlite3"
 )

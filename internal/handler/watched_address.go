@@ -9,10 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"chainfeed-go/internal/middleware"
-	"chainfeed-go/internal/models"
-	"chainfeed-go/internal/repository"
-	"chainfeed-go/internal/service"
+	"github.com/bwmspring/chainfeed-go/internal/middleware"
+	"github.com/bwmspring/chainfeed-go/internal/models"
+	"github.com/bwmspring/chainfeed-go/internal/repository"
+	"github.com/bwmspring/chainfeed-go/internal/service"
 )
 
 type WatchedAddressHandler struct {

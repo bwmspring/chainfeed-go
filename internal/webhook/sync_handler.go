@@ -13,9 +13,9 @@ import (
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 
-	"chainfeed-go/internal/config"
-	"chainfeed-go/internal/parser"
-	"chainfeed-go/internal/repository"
+	"github.com/bwmspring/chainfeed-go/internal/config"
+	"github.com/bwmspring/chainfeed-go/internal/parser"
+	"github.com/bwmspring/chainfeed-go/internal/repository"
 )
 
 // SyncHandler 用于测试的同步处理器

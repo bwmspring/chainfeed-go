@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"chainfeed-go/internal/config"
-	"chainfeed-go/internal/routes"
+	"github.com/bwmspring/chainfeed-go/internal/config"
+	"github.com/bwmspring/chainfeed-go/internal/routes"
+	"github.com/bwmspring/chainfeed-go/internal/websocket"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -20,11 +21,12 @@ type Server struct {
 	logger *zap.Logger
 	db     *sqlx.DB
 	redis  *redis.Client
+	hub    *websocket.Hub
 	router *gin.Engine
 	http   *http.Server
 }
 
-func New(cfg *config.Config, logger *zap.Logger, db *sqlx.DB, rdb *redis.Client) *Server {
+func New(cfg *config.Config, logger *zap.Logger, db *sqlx.DB, rdb *redis.Client, hub *websocket.Hub) *Server {
 	if cfg.Server.Mode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -37,6 +39,7 @@ func New(cfg *config.Config, logger *zap.Logger, db *sqlx.DB, rdb *redis.Client)
 		logger: logger,
 		db:     db,
 		redis:  rdb,
+		hub:    hub,
 		router: router,
 	}
 
@@ -57,7 +60,7 @@ func (s *Server) setupRoutes() {
 	s.router.GET("/health", s.healthCheck)
 
 	// Initialize route modules
-	apiRoutes := routes.NewAPIRoutes(s.cfg, s.logger, s.db)
+	apiRoutes := routes.NewAPIRoutes(s.cfg, s.logger, s.db, s.hub)
 	webhookRoutes := routes.NewWebhookRoutes(s.cfg, s.logger, s.db, s.redis)
 
 	// Register routes

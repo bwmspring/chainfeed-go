@@ -6,8 +6,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"chainfeed-go/internal/config"
-	"chainfeed-go/internal/webhook"
+	"github.com/bwmspring/chainfeed-go/internal/config"
+	"github.com/bwmspring/chainfeed-go/internal/webhook"
 )
 
 type WebhookRoutes struct {

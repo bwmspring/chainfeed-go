@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"chainfeed-go/internal/auth"
+	"github.com/bwmspring/chainfeed-go/internal/auth"
 
 	"github.com/gin-gonic/gin"
 )

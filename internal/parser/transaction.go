@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"chainfeed-go/internal/models"
+	"github.com/bwmspring/chainfeed-go/internal/models"
 )
 
 type AlchemyWebhook struct {

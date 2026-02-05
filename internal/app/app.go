@@ -11,18 +11,23 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"chainfeed-go/internal/config"
-	"chainfeed-go/internal/database"
-	"chainfeed-go/internal/server"
-	"chainfeed-go/pkg/logger"
+	"github.com/bwmspring/chainfeed-go/internal/config"
+	"github.com/bwmspring/chainfeed-go/internal/database"
+	"github.com/bwmspring/chainfeed-go/internal/server"
+	"github.com/bwmspring/chainfeed-go/internal/service"
+	"github.com/bwmspring/chainfeed-go/internal/websocket"
+	"github.com/bwmspring/chainfeed-go/pkg/logger"
 )
 
 type App struct {
-	cfg    *config.Config
-	logger *zap.Logger
-	db     *sqlx.DB
-	redis  *redis.Client
-	server *server.Server
+	cfg       *config.Config
+	logger    *zap.Logger
+	db        *sqlx.DB
+	redis     *redis.Client
+	server    *server.Server
+	hub       *websocket.Hub
+	pubsub    *service.PubSubService
+	cancelCtx context.CancelFunc
 }
 
 func New(configPath string) (*App, error) {
@@ -54,8 +59,14 @@ func New(configPath string) (*App, error) {
 	}
 	zapLogger.Info("Connected to Redis")
 
+	// Create WebSocket hub
+	hub := websocket.NewHub(zapLogger)
+
+	// Create PubSub service
+	pubsubService := service.NewPubSubService(rdb, hub, zapLogger)
+
 	// Create server
-	srv := server.New(cfg, zapLogger, db, rdb)
+	srv := server.New(cfg, zapLogger, db, rdb, hub)
 
 	return &App{
 		cfg:    cfg,
@@ -63,10 +74,24 @@ func New(configPath string) (*App, error) {
 		db:     db,
 		redis:  rdb,
 		server: srv,
+		hub:    hub,
+		pubsub: pubsubService,
 	}, nil
 }
 
 func (a *App) Run() error {
+	// Start WebSocket hub
+	go a.hub.Run()
+
+	// Start Redis Pub/Sub subscriber
+	ctx, cancel := context.WithCancel(context.Background())
+	a.cancelCtx = cancel
+	go func() {
+		if err := a.pubsub.Subscribe(ctx); err != nil && err != context.Canceled {
+			a.logger.Error("PubSub subscriber error", zap.Error(err))
+		}
+	}()
+
 	// Start server in goroutine
 	go func() {
 		if err := a.server.Start(); err != nil {
@@ -81,11 +106,16 @@ func (a *App) Run() error {
 
 	a.logger.Info("Shutting down server...")
 
-	// Graceful shutdown with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	// Cancel PubSub context
+	if a.cancelCtx != nil {
+		a.cancelCtx()
+	}
 
-	if err := a.server.Shutdown(ctx); err != nil {
+	// Graceful shutdown with timeout
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	if err := a.server.Shutdown(shutdownCtx); err != nil {
 		a.logger.Fatal("Server forced to shutdown", zap.Error(err))
 		return err
 	}

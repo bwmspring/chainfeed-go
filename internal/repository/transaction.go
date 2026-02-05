@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"chainfeed-go/internal/models"
+	"github.com/bwmspring/chainfeed-go/internal/models"
 
 	"github.com/jmoiron/sqlx"
 )

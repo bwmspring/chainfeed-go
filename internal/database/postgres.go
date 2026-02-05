@@ -3,7 +3,7 @@ package database
 import (
 	"fmt"
 
-	"chainfeed-go/internal/config"
+	"github.com/bwmspring/chainfeed-go/internal/config"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"

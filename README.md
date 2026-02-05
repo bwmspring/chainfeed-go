@@ -68,8 +68,39 @@ graph LR
 - [x] 阶段 1：架构设计与技术选型
 - [x] 阶段 2：后端索引层与数据库建模
 - [x] 阶段 3：用户认证与监控地址管理
-- [ ] 阶段 4：AI 解析引擎与 Dify 工作流集成（规划中）
-- [ ] 阶段 5：前端 UI 开发与 WebSocket 联调（规划中）
+- [x] 阶段 4：Feed 流与 WebSocket 实时推送
+- [ ] 阶段 5：AI 解析引擎与 Dify 工作流集成（规划中）
+- [ ] 阶段 6：前端 UI 开发与 WebSocket 联调（规划中）
+
+## 🚀 快速开始
+
+### 环境要求
+
+- Go 1.22+
+- PostgreSQL 14+
+- Redis 7+
+- Docker & Docker Compose (可选)
+
+### 启动服务
+
+```bash
+# 1. 启动数据库
+docker-compose up -d
+
+# 2. 运行数据库迁移
+make migrate-up
+
+# 3. 启动服务
+make run
+```
+
+### 测试 WebSocket
+
+打开 `docs/websocket-test.html` 在浏览器中测试 WebSocket 连接。
+
+详细文档请查看：
+- [Phase 1.4 功能文档](docs/phase-1.4-feed-websocket.md)
+- [API 使用指南](docs/phase-1.3-quickstart.md)
 
 ## 📚 API 文档
 

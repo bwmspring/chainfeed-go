@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"chainfeed-go/internal/models"
+	"github.com/bwmspring/chainfeed-go/internal/models"
 
 	"github.com/jmoiron/sqlx"
 )

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 
-	"chainfeed-go/internal/app"
+	"github.com/bwmspring/chainfeed-go/internal/app"
 )
 
 // @title           ChainFeed API

@@ -9,9 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"chainfeed-go/internal/auth"
-	"chainfeed-go/internal/models"
-	"chainfeed-go/internal/repository"
+	"github.com/bwmspring/chainfeed-go/internal/auth"
+	"github.com/bwmspring/chainfeed-go/internal/models"
+	"github.com/bwmspring/chainfeed-go/internal/repository"
 )
 
 type AuthHandler struct {

@@ -14,9 +14,9 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"chainfeed-go/internal/config"
-	"chainfeed-go/internal/parser"
-	"chainfeed-go/internal/repository"
+	"github.com/bwmspring/chainfeed-go/internal/config"
+	"github.com/bwmspring/chainfeed-go/internal/parser"
+	"github.com/bwmspring/chainfeed-go/internal/repository"
 )
 
 type Handler struct {
@@ -28,7 +28,9 @@ type Handler struct {
 
 func NewHandler(cfg *config.Config, logger *zap.Logger, db *sqlx.DB, redis *redis.Client) *Handler {
 	txRepo := repository.NewTransactionRepository(db)
-	batchProcessor := NewBatchProcessor(txRepo, redis, logger)
+	feedRepo := repository.NewFeedRepository(db)
+	watchedAddrRepo := repository.NewWatchedAddressRepository(db)
+	batchProcessor := NewBatchProcessor(txRepo, feedRepo, watchedAddrRepo, redis, logger)
 
 	return &Handler{
 		cfg:            cfg,

@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"chainfeed-go/internal/models"
+	"github.com/bwmspring/chainfeed-go/internal/models"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -68,4 +68,15 @@ func (r *WatchedAddressRepository) UpdateENS(ctx context.Context, id int64, ensN
 	query := `UPDATE watched_addresses SET ens_name = $1 WHERE id = $2`
 	_, err := r.db.ExecContext(ctx, query, ensName, id)
 	return err
+}
+
+func (r *WatchedAddressRepository) FindByAddress(address string) ([]models.WatchedAddress, error) {
+	var addresses []models.WatchedAddress
+	query := `
+		SELECT id, user_id, address, label, ens_name, created_at
+		FROM watched_addresses
+		WHERE LOWER(address) = LOWER($1)
+	`
+	err := r.db.Select(&addresses, query, address)
+	return addresses, err
 }

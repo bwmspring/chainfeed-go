@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"chainfeed-go/internal/config"
+	"github.com/bwmspring/chainfeed-go/internal/config"
 
 	"github.com/redis/go-redis/v9"
 )
