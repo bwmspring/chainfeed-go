@@ -39,11 +39,17 @@
 
 ### 技术栈
 
-- **后端**：Go 1.22 + Gin，使用 goroutine 处理并发任务。
-- **前端**：Next.js 14 + TailwindCSS，响应式 Feed UI。
-- **存储/缓存**：PostgreSQL（持久化）+ Redis（Pub/Sub 与缓存）。
-- **数据源**：Alchemy Webhooks + go-ethereum（RPC 深度交互）。
-- **智能解析**：Dify + OpenAI GPT-4o。
+**后端**
+- Go 1.22 + Gin
+- PostgreSQL + Redis
+- Alchemy Webhooks + go-ethereum
+- Dify + OpenAI GPT-4o
+
+**前端**
+- Next.js 14 (App Router) + TypeScript
+- TailwindCSS + shadcn/ui
+- wagmi + viem + RainbowKit (Web3)
+- TanStack Query + WebSocket
 
 ### 数据流（示意）
 
@@ -63,25 +69,25 @@ graph LR
 - **智能合约解析**：深度解析以太坊主网复杂合约交互，提供精准的交易语义理解。
 - **低延迟推送**：优化 WebSocket 服务端的内存与连接管理，支撑大量实时连接。
 
-## 📅 项目路线图（Roadmap）
-
-- [x] 阶段 1：架构设计与技术选型
-- [x] 阶段 2：后端索引层与数据库建模
-- [x] 阶段 3：用户认证与监控地址管理
-- [x] 阶段 4：Feed 流与 WebSocket 实时推送
-- [ ] 阶段 5：AI 解析引擎与 Dify 工作流集成（规划中）
-- [ ] 阶段 6：前端 UI 开发与 WebSocket 联调（规划中）
 
 ## 🚀 快速开始
 
 ### 环境要求
 
+**后端**
 - Go 1.22+
 - PostgreSQL 14+
 - Redis 7+
 - Docker & Docker Compose (可选)
 
-### 启动服务
+**前端**
+- Node.js 18+
+- pnpm (推荐)
+
+
+### 手动启动
+
+#### 后端
 
 ```bash
 # 1. 启动数据库
@@ -90,17 +96,27 @@ docker-compose up -d
 # 2. 运行数据库迁移
 make migrate-up
 
-# 3. 启动服务
+# 3. 启动后端服务
 make run
 ```
 
-### 测试 WebSocket
+#### 前端
 
-打开 `docs/websocket-test.html` 在浏览器中测试 WebSocket 连接。
+```bash
+cd frontend
 
-详细文档请查看：
-- [Phase 1.4 功能文档](docs/phase-1.4-feed-websocket.md)
-- [API 使用指南](docs/phase-1.3-quickstart.md)
+# 1. 安装依赖
+pnpm install
+
+# 2. 配置环境变量
+# 复制 .env.local 并填写 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+# 从 https://cloud.walletconnect.com/ 获取
+
+# 3. 启动开发服务器
+pnpm dev
+```
+
+访问 http://localhost:3000
 
 ## 📚 API 文档
 
