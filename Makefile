@@ -2,17 +2,20 @@
 
 help:
 	@echo "ChainFeed - 可用命令:"
-	@echo "  make build    - 编译项目"
-	@echo "  make run      - 运行服务"
-	@echo "  make test     - 运行测试"
-	@echo "  make clean    - 清理构建文件"
-	@echo "  make deps     - 安装项目依赖"
-	@echo "  make swagger  - 生成 Swagger 文档"
-	@echo "  make dev      - 生成文档并运行服务"
-	@echo "  make fmt      - 格式化代码"
-	@echo "  make imports  - 整理 import"
-	@echo "  make golines  - 格式化长行"
-	@echo "  make format   - 完整格式化 (fmt + imports + golines)"
+	@echo "  make build       - 编译项目"
+	@echo "  make run         - 运行服务"
+	@echo "  make test        - 运行测试"
+	@echo "  make clean       - 清理构建文件"
+	@echo "  make deps        - 安装项目依赖"
+	@echo "  make swagger     - 生成 Swagger 文档"
+	@echo "  make dev         - 生成文档并运行服务"
+	@echo "  make migrate     - 运行数据库迁移"
+	@echo "  make migrate-down- 回滚数据库迁移"
+	@echo "  make db-reset    - 重置数据库"
+	@echo "  make fmt         - 格式化代码"
+	@echo "  make imports     - 整理 import"
+	@echo "  make golines     - 格式化长行"
+	@echo "  make format      - 完整格式化 (fmt + imports + golines)"
 
 build:
 	@go build -o bin/chainfeed cmd/server/main.go
@@ -43,9 +46,16 @@ swagger:
 
 
 migrate:
-	@psql -U postgres -d chainfeed < migrations/001_create_transactions_table.sql
-	@psql -U postgres -d chainfeed < migrations/002_add_indexes.sql
-	@psql -U postgres -d chainfeed < migrations/003_create_user_tables.sql
+	@echo "运行数据库迁移..."
+	@PGPASSWORD=chainfeed psql -h localhost -p 5433 -U chainfeed -d chainfeed < migrations/000001_init_schema.up.sql
+	@echo "✅ 迁移完成"
+
+migrate-down:
+	@echo "回滚数据库迁移..."
+	@PGPASSWORD=chainfeed psql -h localhost -p 5433 -U chainfeed -d chainfeed < migrations/000001_init_schema.down.sql
+	@echo "✅ 回滚完成"
+
+db-reset: migrate-down migrate
 
 fmt:
 	@go fmt ./...

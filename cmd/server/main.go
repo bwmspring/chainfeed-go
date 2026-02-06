@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 
+	_ "github.com/bwmspring/chainfeed-go/docs/swagger"
 	"github.com/bwmspring/chainfeed-go/internal/app"
 )
 

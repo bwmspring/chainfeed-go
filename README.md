@@ -43,7 +43,7 @@
 - Go 1.22 + Gin
 - PostgreSQL + Redis
 - Alchemy Webhooks + go-ethereum
-- Dify + OpenAI GPT-4o
+- Dify + LLMs
 
 **前端**
 - Next.js 14 (App Router) + TypeScript
@@ -65,9 +65,10 @@ graph LR
 
 ## 📊 技术难点（Engineering Challenges）
 
-- **高并发下的数据一致性**：在高频 Webhook 推送场景，如何通过 Redis 队列和幂等策略保证入库顺序与准确性。
+- **高并发下的数据一致性**：通过 Redis Streams 消息队列和幂等策略保证入库顺序与准确性，支持消息确认和自动重试。
 - **智能合约解析**：深度解析以太坊主网复杂合约交互，提供精准的交易语义理解。
 - **低延迟推送**：优化 WebSocket 服务端的内存与连接管理，支撑大量实时连接。
+- **消息可靠性**：使用 Redis Streams 替代 Pub/Sub，实现消息持久化、确认机制和失败重试。
 
 
 ## 🚀 快速开始
@@ -94,7 +95,7 @@ graph LR
 docker-compose up -d
 
 # 2. 运行数据库迁移
-make migrate-up
+make migrate
 
 # 3. 启动后端服务
 make run
@@ -122,31 +123,24 @@ pnpm dev
 
 项目集成了 Swagger API 文档，提供完整的接口说明和在线测试功能。
 
-### ⚠️ 当前状态
 
-由于网络问题，Swagger 依赖暂未安装，文档 UI 暂时不可用。
-
-**临时方案：**
-- 查看 API 注释：所有接口都有完整的 Swagger 注释
-- 使用文档：`docs/phase-1.3-quickstart.md` 包含所有 API 使用示例
-- 使用 curl/Postman 测试接口
-
-### 启用 Swagger（网络恢复后）
+### 启用 Swagger
 
 ```bash
 # 1. 安装 Swagger 工具
 make swagger-install
 
-# 2. 取消 internal/routes/api.go 中的注释
 
-# 3. 生成文档
+# 2. 生成文档
 make swagger
 
 # 4. 启动服务
 make run
 
 # 5. 访问文档
-open http://localhost:8080/swagger/index.html
+Swagger JSON API: http://localhost:8080/swagger/doc.json
+Swagger UI: http://localhost:8080/swagger/index.html
+健康检查: http://localhost:8080/health
 ```
 
 ### 主要接口

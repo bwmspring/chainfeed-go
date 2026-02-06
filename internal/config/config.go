@@ -21,6 +21,7 @@ type ServerConfig struct {
 	Mode         string        `mapstructure:"mode"`
 	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
 	WriteTimeout time.Duration `mapstructure:"write_timeout"`
+	CORSOrigins  []string      `mapstructure:"cors_origins"`
 }
 
 type DatabaseConfig struct {

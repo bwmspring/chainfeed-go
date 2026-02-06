@@ -26,7 +26,7 @@ type App struct {
 	redis     *redis.Client
 	server    *server.Server
 	hub       *websocket.Hub
-	pubsub    *service.PubSubService
+	stream    *service.StreamService
 	cancelCtx context.CancelFunc
 }
 
@@ -62,8 +62,8 @@ func New(configPath string) (*App, error) {
 	// Create WebSocket hub
 	hub := websocket.NewHub(zapLogger)
 
-	// Create PubSub service
-	pubsubService := service.NewPubSubService(rdb, hub, zapLogger)
+	// Create Stream service
+	streamService := service.NewStreamService(rdb, hub, zapLogger)
 
 	// Create server
 	srv := server.New(cfg, zapLogger, db, rdb, hub)
@@ -75,7 +75,7 @@ func New(configPath string) (*App, error) {
 		redis:  rdb,
 		server: srv,
 		hub:    hub,
-		pubsub: pubsubService,
+		stream: streamService,
 	}, nil
 }
 
@@ -83,12 +83,12 @@ func (a *App) Run() error {
 	// Start WebSocket hub
 	go a.hub.Run()
 
-	// Start Redis Pub/Sub subscriber
+	// Start Redis Stream consumer
 	ctx, cancel := context.WithCancel(context.Background())
 	a.cancelCtx = cancel
 	go func() {
-		if err := a.pubsub.Subscribe(ctx); err != nil && err != context.Canceled {
-			a.logger.Error("PubSub subscriber error", zap.Error(err))
+		if err := a.stream.Consume(ctx); err != nil && err != context.Canceled {
+			a.logger.Error("Stream consumer error", zap.Error(err))
 		}
 	}()
 
@@ -106,7 +106,7 @@ func (a *App) Run() error {
 
 	a.logger.Info("Shutting down server...")
 
-	// Cancel PubSub context
+	// Cancel Stream context
 	if a.cancelCtx != nil {
 		a.cancelCtx()
 	}

@@ -48,7 +48,10 @@ func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		h.logger.Error("failed to upgrade connection", zap.Error(err))
+		h.logger.Error("failed to upgrade websocket connection",
+			zap.Error(err),
+			zap.Int64("user_id", userID.(int64)),
+		)
 		return
 	}
 
@@ -60,6 +63,11 @@ func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 	}
 
 	h.hub.Register <- client
+
+	h.logger.Info("websocket client registered",
+		zap.Int64("user_id", userID.(int64)),
+		zap.String("remote_addr", conn.RemoteAddr().String()),
+	)
 
 	go client.WritePump()
 	go client.ReadPump()

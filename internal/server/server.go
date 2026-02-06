@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/bwmspring/chainfeed-go/internal/config"
+	"github.com/bwmspring/chainfeed-go/internal/middleware"
 	"github.com/bwmspring/chainfeed-go/internal/routes"
 	"github.com/bwmspring/chainfeed-go/internal/websocket"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/redis/go-redis/v9"
@@ -33,6 +35,21 @@ func New(cfg *config.Config, logger *zap.Logger, db *sqlx.DB, rdb *redis.Client,
 
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(middleware.RequestLogger(logger))
+	
+	// CORS middleware
+	corsOrigins := cfg.Server.CORSOrigins
+	if len(corsOrigins) == 0 {
+		corsOrigins = []string{"http://localhost:3000"}
+	}
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     corsOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	s := &Server{
 		cfg:    cfg,

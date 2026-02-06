@@ -47,6 +47,24 @@ func (r *UserRepository) UpdateNonce(ctx context.Context, userID int64, nonce st
 	return err
 }
 
+// UpsertNonce 创建用户或更新 nonce（原子操作）
+func (r *UserRepository) UpsertNonce(ctx context.Context, walletAddress, nonce string) (*models.User, error) {
+	var user models.User
+	query := `
+		INSERT INTO users (wallet_address, nonce, created_at, updated_at)
+		VALUES ($1, $2, NOW(), NOW())
+		ON CONFLICT (wallet_address) 
+		DO UPDATE SET nonce = EXCLUDED.nonce, updated_at = NOW()
+		RETURNING id, wallet_address, nonce, created_at, updated_at
+	`
+	err := r.db.QueryRowContext(ctx, query, walletAddress, nonce).
+		Scan(&user.ID, &user.WalletAddress, &user.Nonce, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *UserRepository) GetByID(ctx context.Context, userID int64) (*models.User, error) {
 	var user models.User
 	query := `SELECT id, wallet_address, nonce, created_at, updated_at FROM users WHERE id = $1`

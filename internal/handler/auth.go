@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -10,8 +8,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/bwmspring/chainfeed-go/internal/auth"
-	"github.com/bwmspring/chainfeed-go/internal/models"
 	"github.com/bwmspring/chainfeed-go/internal/repository"
+	"github.com/bwmspring/chainfeed-go/internal/response"
 )
 
 type AuthHandler struct {
@@ -39,7 +37,7 @@ func NewAuthHandler(
 }
 
 type GetNonceRequest struct {
-	WalletAddress string `json:"wallet_address" binding:"required"`
+	Address string `json:"address" binding:"required"`
 }
 
 type GetNonceResponse struct {
@@ -61,71 +59,50 @@ type GetNonceResponse struct {
 func (h *AuthHandler) GetNonce(c *gin.Context) {
 	var req GetNonceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
 	// 验证地址格式
-	if !common.IsHexAddress(req.WalletAddress) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid wallet address"})
+	if !common.IsHexAddress(req.Address) {
+		response.BadRequest(c, "invalid wallet address")
 		return
 	}
 
-	address := common.HexToAddress(req.WalletAddress).Hex()
-	ctx := context.Background()
-
-	// 查找或创建用户
-	user, err := h.userRepo.GetByWalletAddress(ctx, address)
-	if err != nil {
-		h.logger.Error("Failed to get user", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-		return
-	}
+	address := common.HexToAddress(req.Address).Hex()
+	ctx := c.Request.Context()
 
 	// 生成新 nonce
 	nonce, err := h.web3Svc.GenerateNonce()
 	if err != nil {
 		h.logger.Error("Failed to generate nonce", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		response.InternalServerError(c, "internal server error")
 		return
 	}
 
-	if user == nil {
-		// 创建新用户
-		user = &models.User{
-			WalletAddress: address,
-			Nonce:         nonce,
-		}
-		if err := h.userRepo.Create(ctx, user); err != nil {
-			h.logger.Error("Failed to create user", zap.Error(err))
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-			return
-		}
-	} else {
-		// 更新 nonce
-		if err := h.userRepo.UpdateNonce(ctx, user.ID, nonce); err != nil {
-			h.logger.Error("Failed to update nonce", zap.Error(err))
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-			return
-		}
+	// 原子操作：创建用户或更新 nonce
+	_, err = h.userRepo.UpsertNonce(ctx, address, nonce)
+	if err != nil {
+		h.logger.Error("Failed to upsert user nonce", zap.Error(err), zap.String("address", address))
+		response.InternalServerError(c, "internal server error")
+		return
 	}
 
 	message := h.web3Svc.GetSignMessage(address, nonce)
 
-	c.JSON(http.StatusOK, GetNonceResponse{
+	response.Success(c, GetNonceResponse{
 		Nonce:   nonce,
 		Message: message,
 	})
 }
 
 type VerifySignatureRequest struct {
-	WalletAddress string `json:"wallet_address" binding:"required"`
-	Signature     string `json:"signature"      binding:"required"`
+	Address   string `json:"address" binding:"required"`
+	Signature string `json:"signature" binding:"required"`
 }
 
 type VerifySignatureResponse struct {
-	Token string       `json:"token"`
-	User  *models.User `json:"user"`
+	Token string `json:"token"`
 }
 
 // VerifySignature 验证签名并返回 JWT token
@@ -143,30 +120,40 @@ type VerifySignatureResponse struct {
 func (h *AuthHandler) VerifySignature(c *gin.Context) {
 	var req VerifySignatureRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
-	address := common.HexToAddress(req.WalletAddress).Hex()
-	ctx := context.Background()
+	// 验证地址格式
+	if !common.IsHexAddress(req.Address) {
+		response.BadRequest(c, "invalid wallet address")
+		return
+	}
+
+	address := common.HexToAddress(req.Address).Hex()
+	ctx := c.Request.Context()
 
 	// 获取用户
 	user, err := h.userRepo.GetByWalletAddress(ctx, address)
 	if err != nil {
 		h.logger.Error("Failed to get user", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		response.InternalServerError(c, "internal server error")
 		return
 	}
 
 	if user == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
+		response.Unauthorized(c, "user not found")
 		return
 	}
 
 	// 验证签名
 	if err := h.web3Svc.VerifySignature(address, req.Signature, user.Nonce); err != nil {
-		h.logger.Warn("Signature verification failed", zap.Error(err), zap.String("address", address))
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid signature"})
+		h.logger.Warn("Signature verification failed",
+			zap.Error(err),
+			zap.String("address", address),
+			zap.Int64("user_id", user.ID),
+		)
+		response.Unauthorized(c, "invalid signature")
 		return
 	}
 
@@ -174,26 +161,30 @@ func (h *AuthHandler) VerifySignature(c *gin.Context) {
 	newNonce, err := h.web3Svc.GenerateNonce()
 	if err != nil {
 		h.logger.Error("Failed to generate nonce", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		response.InternalServerError(c, "internal server error")
 		return
 	}
 
 	if err := h.userRepo.UpdateNonce(ctx, user.ID, newNonce); err != nil {
-		h.logger.Error("Failed to update nonce", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		h.logger.Error("Failed to update nonce", zap.Error(err), zap.Int64("user_id", user.ID))
+		response.InternalServerError(c, "internal server error")
 		return
 	}
 
 	// 生成 JWT token
 	token, err := h.jwtSvc.GenerateToken(user.ID, user.WalletAddress)
 	if err != nil {
-		h.logger.Error("Failed to generate token", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		h.logger.Error("Failed to generate token", zap.Error(err), zap.Int64("user_id", user.ID))
+		response.InternalServerError(c, "internal server error")
 		return
 	}
 
-	c.JSON(http.StatusOK, VerifySignatureResponse{
+	h.logger.Info("User authenticated successfully",
+		zap.String("address", address),
+		zap.Int64("user_id", user.ID),
+	)
+
+	response.Success(c, VerifySignatureResponse{
 		Token: token,
-		User:  user,
 	})
 }

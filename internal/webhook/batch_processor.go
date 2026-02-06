@@ -178,7 +178,17 @@ func (bp *BatchProcessor) publishFeedUpdate(ctx context.Context, userID int64, t
 		return
 	}
 
-	if err := bp.redis.Publish(ctx, service.FeedChannel, data).Err(); err != nil {
-		bp.logger.Error("Failed to publish message", zap.Error(err))
+	// 发布到 Redis Stream
+	values := map[string]interface{}{
+		"user_id": userID,
+		"type":    "new_transaction",
+		"payload": string(data),
+	}
+
+	if err := bp.redis.XAdd(ctx, &redis.XAddArgs{
+		Stream: service.FeedStream,
+		Values: values,
+	}).Err(); err != nil {
+		bp.logger.Error("Failed to publish to stream", zap.Error(err))
 	}
 }

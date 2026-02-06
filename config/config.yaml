@@ -3,6 +3,9 @@ server:
   mode: debug # debug, release
   read_timeout: 60s
   write_timeout: 60s
+  cors_origins:
+    - http://localhost:3000
+    - http://localhost:3001
 
 database:
   host: localhost
@@ -27,6 +30,11 @@ ethereum:
   chain_id: 11155111 # Sepolia testnet
   network: sepolia
 
+# ethereum:
+#   rpc_url: ${ALCHEMY_RPC_URL}
+#   chain_id: 1 # Mainnet
+#   network: mainnet
+
 webhook:
   secret: your-webhook-secret-here
 
@@ -38,7 +46,6 @@ auth:
 
 log:
   level: info # debug, info, warn, error
-  encoding: json # json, console
+  encoding: json
   output_paths:
     - stdout
-    - logs/app.log

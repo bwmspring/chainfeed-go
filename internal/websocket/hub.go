@@ -50,8 +50,18 @@ func (h *Hub) Run() {
 				h.clients[client.UserID] = make(map[*Client]bool)
 			}
 			h.clients[client.UserID][client] = true
+			clientCount := len(h.clients[client.UserID])
+			totalClients := 0
+			for _, clients := range h.clients {
+				totalClients += len(clients)
+			}
 			h.mu.Unlock()
-			h.logger.Info("client registered", zap.Int64("user_id", client.UserID))
+			
+			h.logger.Info("websocket client connected",
+				zap.Int64("user_id", client.UserID),
+				zap.Int("user_connections", clientCount),
+				zap.Int("total_connections", totalClients),
+			)
 
 		case client := <-h.Unregister:
 			h.mu.Lock()
@@ -64,8 +74,16 @@ func (h *Hub) Run() {
 					}
 				}
 			}
+			totalClients := 0
+			for _, clients := range h.clients {
+				totalClients += len(clients)
+			}
 			h.mu.Unlock()
-			h.logger.Info("client unregistered", zap.Int64("user_id", client.UserID))
+			
+			h.logger.Info("websocket client disconnected",
+				zap.Int64("user_id", client.UserID),
+				zap.Int("total_connections", totalClients),
+			)
 
 		case message := <-h.broadcast:
 			h.mu.RLock()
@@ -117,6 +135,12 @@ func (c *Client) ReadPump() {
 	for {
 		_, _, err := c.Conn.ReadMessage()
 		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				c.Hub.logger.Warn("websocket unexpected close",
+					zap.Int64("user_id", c.UserID),
+					zap.Error(err),
+				)
+			}
 			break
 		}
 	}
