@@ -11,6 +11,7 @@ type Config struct {
 	Database DatabaseConfig `mapstructure:"database"`
 	Redis    RedisConfig    `mapstructure:"redis"`
 	Ethereum EthereumConfig `mapstructure:"ethereum"`
+	Alchemy  AlchemyConfig  `mapstructure:"alchemy"`
 	Webhook  WebhookConfig  `mapstructure:"webhook"`
 	Auth     AuthConfig     `mapstructure:"auth"`
 	Log      LogConfig      `mapstructure:"log"`
@@ -48,6 +49,10 @@ type EthereumConfig struct {
 	RPCURL  string `mapstructure:"rpc_url"`
 	ChainID int64  `mapstructure:"chain_id"`
 	Network string `mapstructure:"network"`
+}
+
+type AlchemyConfig struct {
+	APIKey string `mapstructure:"api_key"`
 }
 
 type WebhookConfig struct {

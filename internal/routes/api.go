@@ -25,6 +25,7 @@ type APIRoutes struct {
 	authHandler           *handler.AuthHandler
 	watchedAddressHandler *handler.WatchedAddressHandler
 	feedHandler           *handler.FeedHandler
+	transactionHandler    *handler.TransactionHandler
 	wsHandler             *handler.WebSocketHandler
 	jwtService            *auth.JWTService
 }
@@ -34,6 +35,7 @@ func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB, hub *webs
 	userRepo := repository.NewUserRepository(db)
 	watchedAddrRepo := repository.NewWatchedAddressRepository(db)
 	feedRepo := repository.NewFeedRepository(db)
+	txRepo := repository.NewTransactionRepository(db)
 
 	// 初始化 services
 	web3Svc := auth.NewWeb3Service(cfg.Auth.SignMessage)
@@ -49,10 +51,20 @@ func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB, hub *webs
 		}
 	}
 
+	// 初始化 Alchemy service
+	var alchemyService *service.AlchemyService
+	if cfg.Alchemy.APIKey != "" {
+		alchemyService = service.NewAlchemyService(cfg.Alchemy.APIKey, logger)
+		logger.Info("Alchemy service initialized")
+	} else {
+		logger.Warn("Alchemy API key not configured")
+	}
+
 	// 初始化 handlers
 	authHandler := handler.NewAuthHandler(userRepo, web3Svc, jwtSvc, logger, cfg.Auth.NonceExpiry)
-	watchedAddressHandler := handler.NewWatchedAddressHandler(watchedAddrRepo, ensService, logger)
+	watchedAddressHandler := handler.NewWatchedAddressHandler(watchedAddrRepo, ensService, alchemyService, txRepo, feedRepo, logger)
 	feedHandler := handler.NewFeedHandler(feedRepo)
+	transactionHandler := handler.NewTransactionHandler(txRepo, watchedAddrRepo, logger)
 	wsHandler := handler.NewWebSocketHandler(hub, logger)
 
 	return &APIRoutes{
@@ -62,6 +74,7 @@ func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB, hub *webs
 		authHandler:           authHandler,
 		watchedAddressHandler: watchedAddressHandler,
 		feedHandler:           feedHandler,
+		transactionHandler:    transactionHandler,
 		wsHandler:             wsHandler,
 		jwtService:            jwtSvc,
 	}
@@ -98,7 +111,9 @@ func (r *APIRoutes) RegisterRoutes(router *gin.RouterGroup) {
 			{
 				addresses.GET("", r.watchedAddressHandler.List)
 				addresses.POST("", r.watchedAddressHandler.Add)
+				addresses.POST("/:address/refresh", r.watchedAddressHandler.RefreshTransactions)
 				addresses.DELETE("/:id", r.watchedAddressHandler.Remove)
+				addresses.GET("/:address/transactions", r.transactionHandler.GetByAddress)
 			}
 
 			// Feed routes

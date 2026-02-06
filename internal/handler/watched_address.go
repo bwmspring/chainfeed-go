@@ -12,24 +12,34 @@ import (
 	"github.com/bwmspring/chainfeed-go/internal/middleware"
 	"github.com/bwmspring/chainfeed-go/internal/models"
 	"github.com/bwmspring/chainfeed-go/internal/repository"
+	"github.com/bwmspring/chainfeed-go/internal/response"
 	"github.com/bwmspring/chainfeed-go/internal/service"
 )
 
 type WatchedAddressHandler struct {
-	repo       *repository.WatchedAddressRepository
-	ensService *service.ENSService
-	logger     *zap.Logger
+	repo           *repository.WatchedAddressRepository
+	ensService     *service.ENSService
+	alchemyService *service.AlchemyService
+	txRepo         *repository.TransactionRepository
+	feedRepo       *repository.FeedRepository
+	logger         *zap.Logger
 }
 
 func NewWatchedAddressHandler(
 	repo *repository.WatchedAddressRepository,
 	ensService *service.ENSService,
+	alchemyService *service.AlchemyService,
+	txRepo *repository.TransactionRepository,
+	feedRepo *repository.FeedRepository,
 	logger *zap.Logger,
 ) *WatchedAddressHandler {
 	return &WatchedAddressHandler{
-		repo:       repo,
-		ensService: ensService,
-		logger:     logger,
+		repo:           repo,
+		ensService:     ensService,
+		alchemyService: alchemyService,
+		txRepo:         txRepo,
+		feedRepo:       feedRepo,
+		logger:         logger,
 	}
 }
 
@@ -47,7 +57,7 @@ func NewWatchedAddressHandler(
 func (h *WatchedAddressHandler) List(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		response.Unauthorized(c, "unauthorized")
 		return
 	}
 
@@ -55,11 +65,11 @@ func (h *WatchedAddressHandler) List(c *gin.Context) {
 	addresses, err := h.repo.GetByUserID(ctx, userID)
 	if err != nil {
 		h.logger.Error("Failed to get watched addresses", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		response.InternalServerError(c, "internal server error")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": addresses})
+	response.Success(c, addresses)
 }
 
 type AddWatchedAddressRequest struct {
@@ -84,13 +94,13 @@ type AddWatchedAddressRequest struct {
 func (h *WatchedAddressHandler) Add(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		response.Unauthorized(c, "unauthorized")
 		return
 	}
 
 	var req AddWatchedAddressRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -111,14 +121,14 @@ func (h *WatchedAddressHandler) Add(c *gin.Context) {
 	} else {
 		// 可能是 ENS 域名
 		if h.ensService == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "ENS resolution not available"})
+			response.BadRequest(c, "ENS resolution not available")
 			return
 		}
 
 		resolvedAddr, err := h.ensService.Resolve(ctx, req.Address)
 		if err != nil {
 			h.logger.Warn("Failed to resolve ENS", zap.Error(err), zap.String("ens", req.Address))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid address or ENS name"})
+			response.BadRequest(c, "invalid address or ENS name")
 			return
 		}
 		address = resolvedAddr
@@ -129,12 +139,12 @@ func (h *WatchedAddressHandler) Add(c *gin.Context) {
 	exists, err := h.repo.Exists(ctx, userID, address)
 	if err != nil {
 		h.logger.Error("Failed to check address existence", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		response.InternalServerError(c, "internal server error")
 		return
 	}
 
 	if exists {
-		c.JSON(http.StatusConflict, gin.H{"error": "address already watched"})
+		response.Error(c, http.StatusConflict, 409, "address already watched")
 		return
 	}
 
@@ -148,11 +158,79 @@ func (h *WatchedAddressHandler) Add(c *gin.Context) {
 
 	if err := h.repo.Create(ctx, watchedAddr); err != nil {
 		h.logger.Error("Failed to create watched address", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		response.InternalServerError(c, "internal server error")
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"data": watchedAddr})
+	// 立即查询该地址的交易记录
+	go h.fetchAndStoreTransactions(context.Background(), userID, watchedAddr)
+
+	response.Success(c, watchedAddr)
+}
+
+// RefreshTransactions 刷新地址的交易记录
+func (h *WatchedAddressHandler) RefreshTransactions(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	address := c.Param("address")
+
+	ctx := c.Request.Context()
+
+	// 查询监控地址
+	watchedAddr, err := h.repo.GetByUserAndAddress(ctx, userID.(int64), address)
+	if err != nil {
+		h.logger.Error("Failed to get watched address", zap.Error(err))
+		response.NotFound(c, "address not found")
+		return
+	}
+
+	// 异步刷新
+	go h.fetchAndStoreTransactions(context.Background(), userID.(int64), watchedAddr)
+
+	response.Success(c, gin.H{"message": "refresh started"})
+}
+
+// fetchAndStoreTransactions 查询并存储交易记录
+func (h *WatchedAddressHandler) fetchAndStoreTransactions(ctx context.Context, userID int64, watchedAddr *models.WatchedAddress) {
+	if h.alchemyService == nil {
+		return
+	}
+
+	// 查询交易
+	transactions, err := h.alchemyService.GetAddressTransfers(ctx, watchedAddr.Address)
+	if err != nil {
+		h.logger.Error("Failed to fetch transactions from Alchemy",
+			zap.String("address", watchedAddr.Address),
+			zap.Error(err))
+		return
+	}
+
+	h.logger.Info("Fetched transactions from Alchemy",
+		zap.String("address", watchedAddr.Address),
+		zap.Int("count", len(transactions)))
+
+	// 存储交易并创建 feed
+	for _, tx := range transactions {
+		// 存储交易
+		if err := h.txRepo.Create(tx); err != nil {
+			h.logger.Error("Failed to store transaction",
+				zap.String("tx_hash", tx.TxHash),
+				zap.Error(err))
+			continue
+		}
+
+		// 创建 feed item
+		feedItem := &models.FeedItem{
+			UserID:           userID,
+			TransactionID:    tx.ID,
+			WatchedAddressID: watchedAddr.ID,
+		}
+
+		if err := h.feedRepo.Create(feedItem); err != nil {
+			h.logger.Error("Failed to create feed item",
+				zap.String("tx_hash", tx.TxHash),
+				zap.Error(err))
+		}
+	}
 }
 
 // Remove 删除监控地址
@@ -171,23 +249,23 @@ func (h *WatchedAddressHandler) Add(c *gin.Context) {
 func (h *WatchedAddressHandler) Remove(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		response.Unauthorized(c, "unauthorized")
 		return
 	}
 
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		response.BadRequest(c, "invalid id")
 		return
 	}
 
 	ctx := context.Background()
 	if err := h.repo.Delete(ctx, id, userID); err != nil {
 		h.logger.Error("Failed to delete watched address", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		response.InternalServerError(c, "internal server error")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "address removed"})
+	response.SuccessWithMessage(c, "address removed", nil)
 }

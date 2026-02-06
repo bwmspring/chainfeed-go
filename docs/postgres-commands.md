@@ -24,7 +24,7 @@ docker-compose logs -f postgres  # 实时查看
 docker exec -it chainfeed-postgres psql -U chainfeed -d chainfeed
 
 # 或使用本机 psql 客户端连接
-PGPASSWORD=chainfeed psql -h localhost -p 5433 -U chainfeed -d chainfeed
+PGPASSWORD=chainfeed psql -h localhost -p 5432 -U chainfeed -d chainfeed
 ```
 
 ## 基本 CRUD 操作

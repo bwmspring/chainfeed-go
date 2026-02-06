@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/bwmspring/chainfeed-go/internal/response"
 	"github.com/bwmspring/chainfeed-go/internal/websocket"
 
 	"github.com/gin-gonic/gin"
@@ -42,7 +43,7 @@ func NewWebSocketHandler(hub *websocket.Hub, logger *zap.Logger) *WebSocketHandl
 func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		response.Unauthorized(c, "unauthorized")
 		return
 	}
 

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@metamask/sdk": "^0.33.1",
+    "@radix-ui/react-dialog": "^1.1.15",
     "@rainbow-me/rainbowkit": "^2.2.10",
     "@tanstack/react-query": "^5.90.20",
     "@wagmi/connectors": "^7.1.6",

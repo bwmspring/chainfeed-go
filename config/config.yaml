@@ -35,6 +35,9 @@ ethereum:
 #   chain_id: 1 # Mainnet
 #   network: mainnet
 
+alchemy:
+  api_key: your-alchemy-api-key-here
+
 webhook:
   secret: your-webhook-secret-here
 

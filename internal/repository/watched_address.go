@@ -80,3 +80,13 @@ func (r *WatchedAddressRepository) FindByAddress(address string) ([]models.Watch
 	err := r.db.Select(&addresses, query, address)
 	return addresses, err
 }
+
+func (r *WatchedAddressRepository) GetByUserAndAddress(ctx context.Context, userID int64, address string) (*models.WatchedAddress, error) {
+	var addr models.WatchedAddress
+	query := `SELECT * FROM watched_addresses WHERE user_id = $1 AND LOWER(address) = LOWER($2)`
+	err := r.db.GetContext(ctx, &addr, query, userID, address)
+	if err != nil {
+		return nil, err
+	}
+	return &addr, nil
+}
