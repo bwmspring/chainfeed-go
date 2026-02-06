@@ -6,22 +6,27 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export function LoginForm() {
   const router = useRouter();
   const { address, isConnected } = useConnection();
   const { mutate: signMessage } = useSignMessage();
   const { login, isLoading } = useAuth();
+  const hasTriggeredLogin = useRef(false);
 
   // 连接钱包后自动触发签名登录
   useEffect(() => {
-    if (isConnected && address && signMessage && !isLoading) {
+    if (isConnected && address && signMessage && !isLoading && !hasTriggeredLogin.current) {
+      hasTriggeredLogin.current = true;
       login(address, signMessage)
         .then(() => router.push('/feed'))
-        .catch((error) => console.error('Login failed:', error));
+        .catch((error) => {
+          console.error('Login failed:', error);
+          hasTriggeredLogin.current = false; // 失败后允许重试
+        });
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, signMessage, login, isLoading, router]);
 
   return (
     <Card className="p-6 space-y-4">

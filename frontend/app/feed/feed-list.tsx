@@ -1,15 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/header';
 import { FeedCard } from '@/components/feed-card';
 import { useWebSocket } from '@/hooks/use-websocket';
 
 export function FeedList() {
   const [feeds, setFeeds] = useState<any[]>([]);
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 从 localStorage 获取 token
+    const authToken = localStorage.getItem('auth_token');
+    setToken(authToken);
+  }, []);
   
   const { isConnected } = useWebSocket({
     url: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws',
+    token: token || undefined,
     onMessage: (data) => {
       setFeeds((prev) => [data, ...prev].slice(0, 50));
     },

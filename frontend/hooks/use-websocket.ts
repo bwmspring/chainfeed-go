@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 interface UseWebSocketOptions {
   url: string;
+  token?: string;
   onMessage?: (data: any) => void;
   onError?: (error: Event) => void;
   reconnect?: boolean;
@@ -10,6 +11,7 @@ interface UseWebSocketOptions {
 
 export function useWebSocket({
   url,
+  token,
   onMessage,
   onError,
   reconnect = true,
@@ -17,11 +19,26 @@ export function useWebSocket({
 }: UseWebSocketOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onMessageRef = useRef(onMessage);
+  const onErrorRef = useRef(onError);
+
+  // 更新 ref，避免闭包问题
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+    onErrorRef.current = onError;
+  }, [onMessage, onError]);
 
   useEffect(() => {
+    // 没有 token 不连接
+    if (!token) {
+      return;
+    }
+
     const connect = () => {
-      const ws = new WebSocket(url);
+      // 将 token 作为 query 参数
+      const wsUrl = `${url}?token=${encodeURIComponent(token)}`;
+      const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         setIsConnected(true);
@@ -31,7 +48,7 @@ export function useWebSocket({
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          onMessage?.(data);
+          onMessageRef.current?.(data);
         } catch (error) {
           console.error('Failed to parse message:', error);
         }
@@ -39,14 +56,14 @@ export function useWebSocket({
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
-        onError?.(error);
+        onErrorRef.current?.(error);
       };
 
       ws.onclose = () => {
         setIsConnected(false);
         console.log('WebSocket disconnected');
 
-        if (reconnect) {
+        if (reconnect && token) {
           reconnectTimeoutRef.current = setTimeout(connect, reconnectInterval);
         }
       };
@@ -62,7 +79,7 @@ export function useWebSocket({
       }
       wsRef.current?.close();
     };
-  }, [url, onMessage, onError, reconnect, reconnectInterval]);
+  }, [url, token, reconnect, reconnectInterval]);
 
   const send = (data: any) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

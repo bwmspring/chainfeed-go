@@ -63,7 +63,7 @@ export function Hero() {
               </div>
               <h3 className="text-lg font-semibold">AI 解析</h3>
               <p className="text-sm text-muted-foreground">
-                GPT-4o 自动解析复杂交易，生成人类可读摘要
+                LLMs 自动解析复杂交易，生成人类可读摘要
               </p>
             </div>
 
