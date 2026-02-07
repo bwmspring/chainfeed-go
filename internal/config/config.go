@@ -1,9 +1,11 @@
 package config
 
 import (
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
+	"github.com/subosito/gotenv"
 )
 
 type Config struct {
@@ -73,8 +75,12 @@ type LogConfig struct {
 }
 
 func Load(configPath string) (*Config, error) {
+	// Load environment variables from a local .env file if present
+	_ = gotenv.Load()
+
 	viper.SetConfigFile(configPath)
 	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err

@@ -1,35 +1,19 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useAccount } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Button } from '@/components/ui/button';
 import { Activity, Shield, Zap } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { useSignMessage } from 'wagmi';
+import { useEffect } from 'react';
 
 export function Hero() {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
-  const { mutate: signMessage } = useSignMessage();
-  const { login, isLoading } = useAuth();
-  const [hasTriedLogin, setHasTriedLogin] = useState(false);
 
-  // 连接钱包后自动登录
+  // 检查是否已登录并跳转
   useEffect(() => {
-    if (isConnected && address && signMessage && !hasTriedLogin && !isLoading) {
-      setHasTriedLogin(true);
-      login(address, signMessage)
-        .then(() => {
-          router.push('/feed');
-        })
-        .catch((error) => {
-          console.error('Auto login failed:', error);
-          setHasTriedLogin(false);
-        });
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      router.push('/feed');
     }
-  }, [isConnected, address, signMessage, hasTriedLogin, isLoading, login, router]);
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-blue-50 dark:from-slate-950 dark:via-purple-950 dark:to-blue-950">

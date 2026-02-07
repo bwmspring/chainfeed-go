@@ -68,19 +68,6 @@ export function AddressList() {
     }
   };
 
-  const handleRefresh = async (address: string) => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      await fetch(`${API_BASE}/addresses/${address}/refresh`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      alert('刷新已开始，请稍后查看 Feed');
-    } catch (error) {
-      console.error('Failed to refresh:', error);
-    }
-  };
-
   if (isLoading) {
     return (
       <Card className="backdrop-blur-sm bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 shadow-xl">
@@ -167,17 +154,6 @@ export function AddressList() {
 
                   {/* 操作按钮 */}
                   <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRefresh(addr.address);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
-                    >
-                      🔄
-                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"

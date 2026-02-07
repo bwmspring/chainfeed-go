@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
+	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
@@ -30,7 +31,7 @@ type APIRoutes struct {
 	jwtService            *auth.JWTService
 }
 
-func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB, hub *websocket.Hub) *APIRoutes {
+func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB, redis *redis.Client, hub *websocket.Hub) *APIRoutes {
 	// 初始化 repositories
 	userRepo := repository.NewUserRepository(db)
 	watchedAddrRepo := repository.NewWatchedAddressRepository(db)
@@ -62,7 +63,7 @@ func NewAPIRoutes(cfg *config.Config, logger *zap.Logger, db *sqlx.DB, hub *webs
 
 	// 初始化 handlers
 	authHandler := handler.NewAuthHandler(userRepo, web3Svc, jwtSvc, logger, cfg.Auth.NonceExpiry)
-	watchedAddressHandler := handler.NewWatchedAddressHandler(watchedAddrRepo, ensService, alchemyService, txRepo, feedRepo, logger)
+	watchedAddressHandler := handler.NewWatchedAddressHandler(watchedAddrRepo, ensService, alchemyService, txRepo, feedRepo, redis, logger)
 	feedHandler := handler.NewFeedHandler(feedRepo)
 	transactionHandler := handler.NewTransactionHandler(txRepo, watchedAddrRepo, logger)
 	wsHandler := handler.NewWebSocketHandler(hub, logger)
@@ -111,7 +112,6 @@ func (r *APIRoutes) RegisterRoutes(router *gin.RouterGroup) {
 			{
 				addresses.GET("", r.watchedAddressHandler.List)
 				addresses.POST("", r.watchedAddressHandler.Add)
-				addresses.POST("/:address/refresh", r.watchedAddressHandler.RefreshTransactions)
 				addresses.DELETE("/:id", r.watchedAddressHandler.Remove)
 				addresses.GET("/:address/transactions", r.transactionHandler.GetByAddress)
 			}

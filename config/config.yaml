@@ -36,7 +36,7 @@ ethereum:
 #   network: mainnet
 
 alchemy:
-  api_key: your-alchemy-api-key-here
+  api_key: ""
 
 webhook:
   secret: your-webhook-secret-here

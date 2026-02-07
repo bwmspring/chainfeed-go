@@ -1,36 +1,66 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount, useDisconnect } from 'wagmi';
+import { useAccount, useDisconnect, useSignMessage } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Logo } from './logo';
 import { Button } from './ui/button';
+import { useAuth } from '@/hooks/use-auth';
 
 export function Header() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
+  const { mutate: signMessage } = useSignMessage();
+  const { login } = useAuth();
   const [language, setLanguage] = useState('zh');
   const [isDark, setIsDark] = useState(false);
+  const loginAttemptedRef = useRef(false);
 
   useEffect(() => {
-    // 初始化主题状态
     setIsDark(document.documentElement.classList.contains('dark'));
   }, []);
+
+  // 自动登录逻辑
+  useEffect(() => {
+    // 如果未连接或已尝试过登录，跳过
+    if (!isConnected || loginAttemptedRef.current) {
+      return;
+    }
+
+    // 检查是否已有 token
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      return;
+    }
+
+    // 确保有 address 和 signMessage
+    if (!address || !signMessage) {
+      return;
+    }
+
+    // 标记已尝试登录
+    loginAttemptedRef.current = true;
+
+    // 执行登录
+    login(address, signMessage)
+      .then(() => {
+        console.log('Login successful, redirecting...');
+        window.location.href = '/feed';
+      })
+      .catch((error) => {
+        console.error('Login failed:', error);
+        loginAttemptedRef.current = false;
+      });
+  }, [isConnected, address, signMessage, login]);
 
   const handleLogout = () => {
     disconnect();
     localStorage.removeItem('auth_token');
+    loginAttemptedRef.current = false;
     router.push('/');
   };
-
-  // 监听钱包断开
-  useEffect(() => {
-    if (!isConnected) {
-      localStorage.removeItem('auth_token');
-    }
-  }, [isConnected]);
 
   const toggleTheme = () => {
     const newIsDark = !isDark;
@@ -99,6 +129,7 @@ export function Header() {
                     {address?.slice(0, 6)}...{address?.slice(-4)}
                   </span>
                 </div>
+                
                 <Button
                   variant="outline"
                   size="sm"

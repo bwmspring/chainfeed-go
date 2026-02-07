@@ -77,7 +77,7 @@ func (s *Server) setupRoutes() {
 	s.router.GET("/health", s.healthCheck)
 
 	// Initialize route modules
-	apiRoutes := routes.NewAPIRoutes(s.cfg, s.logger, s.db, s.hub)
+	apiRoutes := routes.NewAPIRoutes(s.cfg, s.logger, s.db, s.redis, s.hub)
 	webhookRoutes := routes.NewWebhookRoutes(s.cfg, s.logger, s.db, s.redis)
 
 	// Register routes

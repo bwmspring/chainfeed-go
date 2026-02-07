@@ -47,12 +47,12 @@ swagger:
 
 migrate:
 	@echo "运行数据库迁移..."
-	@PGPASSWORD=chainfeed psql -h localhost -p 5433 -U chainfeed -d chainfeed < migrations/000001_init_schema.up.sql
+	@PGPASSWORD=chainfeed psql -h localhost -p 5432 -U chainfeed -d chainfeed < migrations/000001_init_schema.up.sql
 	@echo "✅ 迁移完成"
 
 migrate-down:
 	@echo "回滚数据库迁移..."
-	@PGPASSWORD=chainfeed psql -h localhost -p 5433 -U chainfeed -d chainfeed < migrations/000001_init_schema.down.sql
+	@PGPASSWORD=chainfeed psql -h localhost -p 5432 -U chainfeed -d chainfeed < migrations/000001_init_schema.down.sql
 	@echo "✅ 回滚完成"
 
 db-reset: migrate-down migrate

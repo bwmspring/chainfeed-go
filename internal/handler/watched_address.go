@@ -2,11 +2,13 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	"github.com/bwmspring/chainfeed-go/internal/middleware"
@@ -14,6 +16,7 @@ import (
 	"github.com/bwmspring/chainfeed-go/internal/repository"
 	"github.com/bwmspring/chainfeed-go/internal/response"
 	"github.com/bwmspring/chainfeed-go/internal/service"
+	"github.com/bwmspring/chainfeed-go/internal/websocket"
 )
 
 type WatchedAddressHandler struct {
@@ -22,6 +25,7 @@ type WatchedAddressHandler struct {
 	alchemyService *service.AlchemyService
 	txRepo         *repository.TransactionRepository
 	feedRepo       *repository.FeedRepository
+	redis          *redis.Client
 	logger         *zap.Logger
 }
 
@@ -31,6 +35,7 @@ func NewWatchedAddressHandler(
 	alchemyService *service.AlchemyService,
 	txRepo *repository.TransactionRepository,
 	feedRepo *repository.FeedRepository,
+	redis *redis.Client,
 	logger *zap.Logger,
 ) *WatchedAddressHandler {
 	return &WatchedAddressHandler{
@@ -39,6 +44,7 @@ func NewWatchedAddressHandler(
 		alchemyService: alchemyService,
 		txRepo:         txRepo,
 		feedRepo:       feedRepo,
+		redis:          redis,
 		logger:         logger,
 	}
 }
@@ -168,35 +174,14 @@ func (h *WatchedAddressHandler) Add(c *gin.Context) {
 	response.Success(c, watchedAddr)
 }
 
-// RefreshTransactions 刷新地址的交易记录
-func (h *WatchedAddressHandler) RefreshTransactions(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	address := c.Param("address")
-
-	ctx := c.Request.Context()
-
-	// 查询监控地址
-	watchedAddr, err := h.repo.GetByUserAndAddress(ctx, userID.(int64), address)
-	if err != nil {
-		h.logger.Error("Failed to get watched address", zap.Error(err))
-		response.NotFound(c, "address not found")
-		return
-	}
-
-	// 异步刷新
-	go h.fetchAndStoreTransactions(context.Background(), userID.(int64), watchedAddr)
-
-	response.Success(c, gin.H{"message": "refresh started"})
-}
-
 // fetchAndStoreTransactions 查询并存储交易记录
 func (h *WatchedAddressHandler) fetchAndStoreTransactions(ctx context.Context, userID int64, watchedAddr *models.WatchedAddress) {
 	if h.alchemyService == nil {
 		return
 	}
 
-	// 查询交易
-	transactions, err := h.alchemyService.GetAddressTransfers(ctx, watchedAddr.Address)
+	// 查询最近 20 笔交易
+	transactions, err := h.alchemyService.GetAddressTransfersWithLimit(ctx, watchedAddr.Address, 20)
 	if err != nil {
 		h.logger.Error("Failed to fetch transactions from Alchemy",
 			zap.String("address", watchedAddr.Address),
@@ -210,9 +195,10 @@ func (h *WatchedAddressHandler) fetchAndStoreTransactions(ctx context.Context, u
 
 	// 存储交易并创建 feed
 	for _, tx := range transactions {
-		// 存储交易
+		// 存储交易（数据库唯一索引会自动去重）
 		if err := h.txRepo.Create(tx); err != nil {
-			h.logger.Error("Failed to store transaction",
+			// 如果是重复交易，跳过
+			h.logger.Debug("Transaction already exists or failed to store",
 				zap.String("tx_hash", tx.TxHash),
 				zap.Error(err))
 			continue
@@ -229,7 +215,46 @@ func (h *WatchedAddressHandler) fetchAndStoreTransactions(ctx context.Context, u
 			h.logger.Error("Failed to create feed item",
 				zap.String("tx_hash", tx.TxHash),
 				zap.Error(err))
+			continue
 		}
+
+		// 推送到 Redis Stream（推送完整的 FeedItem）
+		h.publishFeedUpdate(ctx, feedItem, tx, watchedAddr)
+	}
+}
+
+func (h *WatchedAddressHandler) publishFeedUpdate(ctx context.Context, feedItem *models.FeedItem, tx *models.Transaction, wa *models.WatchedAddress) {
+	// 构造前端期望的数据格式
+	payload := map[string]interface{}{
+		"id":              feedItem.ID,
+		"created_at":      feedItem.CreatedAt,
+		"transaction":     tx,
+		"watched_address": wa,
+	}
+
+	msg := &websocket.Message{
+		UserID:  feedItem.UserID,
+		Type:    "new_transaction",
+		Payload: payload,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		h.logger.Error("Failed to marshal message", zap.Error(err))
+		return
+	}
+
+	values := map[string]any{
+		"user_id": feedItem.UserID,
+		"type":    "new_transaction",
+		"payload": string(data),
+	}
+
+	if err := h.redis.XAdd(ctx, &redis.XAddArgs{
+		Stream: service.FeedStream,
+		Values: values,
+	}).Err(); err != nil {
+		h.logger.Error("Failed to publish to stream", zap.Error(err))
 	}
 }
 

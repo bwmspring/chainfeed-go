@@ -1,15 +1,55 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { FeedCard } from '@/components/feed-card';
 import { useWebSocket } from '@/hooks/use-websocket';
 
+interface FeedItem {
+  id: number;
+  created_at: string;
+  [key: string]: any;
+}
+
 export function FeedList() {
-  const [feeds, setFeeds] = useState<any[]>([]);
+  const [feeds, setFeeds] = useState<FeedItem[]>([]);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
   const [hasFetched, setHasFetched] = useState(false);
+  const feedIdsRef = useRef(new Set<number>());
+
+  const fetchFeeds = async (pageNum: number, append = false) => {
+    const authToken = localStorage.getItem('auth_token');
+    if (!authToken) return;
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'}/feed?page=${pageNum}&page_size=10`,
+        { headers: { 'Authorization': `Bearer ${authToken}` } }
+      );
+      
+      const text = await res.text();
+      const data = JSON.parse(text);
+      
+      if (data.code === 0 && data.data?.items) {
+        const items = data.data.items;
+        items.forEach((item: FeedItem) => feedIdsRef.current.add(item.id));
+        
+        if (append) {
+          setFeeds(prev => [...prev, ...items]);
+        } else {
+          setFeeds(items);
+        }
+        
+        setHasMore(items.length === 10);
+      }
+    } catch (e) {
+      console.error('[FeedList] Fetch error:', e);
+    }
+  };
 
   useEffect(() => {
     if (hasFetched) return;
@@ -17,36 +57,45 @@ export function FeedList() {
 
     const authToken = localStorage.getItem('auth_token');
     setToken(authToken);
-    
-    // 获取初始 feed 数据
+
     if (authToken) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'}/feed`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      })
-        .then(async res => {
-          const text = await res.text();
-          console.log('[FeedList] API response:', text);
-          try {
-            const data = JSON.parse(text);
-            if (data.code === 0 && data.data?.items) {
-              setFeeds(data.data.items);
-            }
-          } catch (e) {
-            console.error('[FeedList] JSON parse error:', e, 'Response:', text);
-          }
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
+      fetchFeeds(1).finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
   }, [hasFetched]);
-  
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    await fetchFeeds(nextPage, true);
+    setPage(nextPage);
+    setLoadingMore(false);
+  };
+
   const { isConnected } = useWebSocket({
     url: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws',
     token: token || undefined,
-    onMessage: (data) => {
-      setFeeds((prev) => [data, ...prev].slice(0, 50));
+    onMessage: (data: FeedItem) => {
+      console.log('[FeedList] WebSocket message received:', data);
+      
+      // 去重：如果已存在则忽略
+      if (feedIdsRef.current.has(data.id)) {
+        console.log('[FeedList] Duplicate feed item ignored:', data.id);
+        return;
+      }
+
+      feedIdsRef.current.add(data.id);
+
+      setFeeds((prev) => {
+        const updated = [data, ...prev];
+        // 按 created_at 降序排序（最新在前）
+        return updated
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 50); // 只保留最新 50 条
+      });
     },
   });
 
@@ -89,7 +138,7 @@ export function FeedList() {
               <div className="text-6xl mb-4">📡</div>
               <h3 className="text-lg font-semibold mb-2">等待链上活动</h3>
               <p className="text-muted-foreground mb-4">
-                当监控的地址有交易时，会实时显示在这里
+                添加监控地址后，会自动加载最近 20 笔交易
               </p>
               <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
@@ -98,15 +147,30 @@ export function FeedList() {
             </div>
           </Card>
         ) : (
-          feeds.map((feed, index) => (
-            <div
-              key={feed.id || index}
-              className="animate-in fade-in slide-in-from-top-4 duration-500"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <FeedCard item={feed} />
-            </div>
-          ))
+          <>
+            {feeds.map((feed, index) => (
+              <div
+                key={feed.id}
+                className="animate-in fade-in slide-in-from-top-4 duration-500"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <FeedCard item={feed} />
+              </div>
+            ))}
+            
+            {/* 加载更多按钮 */}
+            {hasMore && (
+              <div className="flex justify-center pt-4">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {loadingMore ? '加载中...' : '加载更多'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

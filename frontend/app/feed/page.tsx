@@ -1,19 +1,29 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FeedList } from './feed-list';
 import { AddressList } from '@/components/address-list';
 
 export default function FeedPage() {
   const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     if (!token) {
-      router.push('/');
+      router.replace('/');
+      return;
     }
+    
+    // 简单验证：只检查 token 存在，不发请求
+    // 如果 token 过期，API 调用会自然失败，前端可以统一处理 401
+    setIsAuthorized(true);
   }, [router]);
+
+  if (!isAuthorized) {
+    return null; // 不显示任何内容，直接跳转
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-blue-50 dark:from-slate-950 dark:via-purple-950 dark:to-blue-950">

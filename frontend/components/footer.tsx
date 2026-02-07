@@ -18,7 +18,7 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-3">
               <a
-                href="https://twitter.com/llxxs"
+                href="https://twitter.com/llxxs2022"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-2xl hover:scale-110 transition-transform"
@@ -27,7 +27,7 @@ export function Footer() {
                 𝕏
               </a>
               <a
-                href="https://github.com/bwmspring/chainfeed"
+                href="https://github.com/bwmspring/chainfeed-go"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-2xl hover:scale-110 transition-transform"

@@ -40,7 +40,6 @@ CREATE TABLE IF NOT EXISTS transactions (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_transactions_tx_hash ON transactions(tx_hash);
 CREATE INDEX idx_transactions_from_address ON transactions(from_address);
 CREATE INDEX idx_transactions_to_address ON transactions(to_address);
 CREATE INDEX idx_transactions_block_timestamp ON transactions(block_timestamp DESC);

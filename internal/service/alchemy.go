@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -55,6 +56,10 @@ type AlchemyResponse struct {
 
 // GetAddressTransfers 获取地址的 ETH 转账记录（发送+接收）
 func (s *AlchemyService) GetAddressTransfers(ctx context.Context, address string) ([]*models.Transaction, error) {
+	return s.GetAddressTransfersWithLimit(ctx, address, 0)
+}
+
+func (s *AlchemyService) GetAddressTransfersWithLimit(ctx context.Context, address string, limit int) ([]*models.Transaction, error) {
 	// 查询从创世区块开始
 	fromBlock := "0x0"
 	
@@ -81,7 +86,17 @@ func (s *AlchemyService) GetAddressTransfers(ctx context.Context, address string
 		result = append(result, tx)
 	}
 	
-	s.logger.Info("Merged transactions", zap.Int("total", len(result)))
+	// 按时间戳降序排序（最新的在前）
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].BlockTimestamp.After(result[j].BlockTimestamp)
+	})
+	
+	// 限制返回数量（取最新的 N 条）
+	if limit > 0 && len(result) > limit {
+		result = result[:limit]
+	}
+	
+	s.logger.Info("Merged transactions", zap.Int("total", len(result)), zap.Int("limit", limit))
 	return result, nil
 }
 

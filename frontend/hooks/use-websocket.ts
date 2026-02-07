@@ -47,7 +47,11 @@ export function useWebSocket({
 
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
+          const message = JSON.parse(event.data);
+          console.log('[WebSocket] Raw message:', message);
+          
+          // 提取 Payload（后端推送的是 { user_id, type, payload } 结构）
+          const data = message.payload || message;
           onMessageRef.current?.(data);
         } catch (error) {
           console.error('Failed to parse message:', error);

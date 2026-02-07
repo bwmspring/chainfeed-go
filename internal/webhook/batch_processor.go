@@ -157,19 +157,24 @@ func (bp *BatchProcessor) createFeedItems(ctx context.Context, tx *models.Transa
 			}
 
 			// 通过 Redis Pub/Sub 推送消息
-			bp.publishFeedUpdate(ctx, wa.UserID, tx, &wa)
+			bp.publishFeedUpdate(ctx, feedItem, tx, &wa)
 		}
 	}
 }
 
-func (bp *BatchProcessor) publishFeedUpdate(ctx context.Context, userID int64, tx *models.Transaction, wa *models.WatchedAddress) {
+func (bp *BatchProcessor) publishFeedUpdate(ctx context.Context, feedItem *models.FeedItem, tx *models.Transaction, wa *models.WatchedAddress) {
+	// 构造前端期望的数据格式
+	payload := map[string]interface{}{
+		"id":              feedItem.ID,
+		"created_at":      feedItem.CreatedAt,
+		"transaction":     tx,
+		"watched_address": wa,
+	}
+
 	msg := &websocket.Message{
-		UserID: userID,
-		Type:   "new_transaction",
-		Payload: map[string]interface{}{
-			"transaction":     tx,
-			"watched_address": wa,
-		},
+		UserID:  feedItem.UserID,
+		Type:    "new_transaction",
+		Payload: payload,
 	}
 
 	data, err := json.Marshal(msg)
@@ -180,7 +185,7 @@ func (bp *BatchProcessor) publishFeedUpdate(ctx context.Context, userID int64, t
 
 	// 发布到 Redis Stream
 	values := map[string]interface{}{
-		"user_id": userID,
+		"user_id": feedItem.UserID,
 		"type":    "new_transaction",
 		"payload": string(data),
 	}
