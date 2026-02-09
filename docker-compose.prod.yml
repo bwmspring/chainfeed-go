@@ -1,0 +1,80 @@
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB: ${DB_NAME}
+    secrets:
+      - db_password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server","--save","900","1","--appendonly","yes"]
+    networks:
+      - internal
+    secrets:
+      - redis_password
+
+  backend:
+    image: your-registry/chainfeed-backend:latest
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${DB_USER}
+      - DB_NAME=${DB_NAME}
+      - REDIS_HOST=redis
+      - SERVER_MODE=release
+      - SERVER_PORT=8080
+      - CORS_ORIGINS=${CORS_ORIGINS}
+    secrets:
+      - db_password
+      - jwt_secret
+      - webhook_secret
+      - redis_password
+      - alchemy_api_key
+    depends_on:
+      - db
+      - redis
+    networks:
+      - internal
+    # 不在生产环境下直接将数据库/redis暴露到宿主机；仅将后端绑定到回环地址以限制直接公网访问
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  db-data:
+
+networks:
+  internal:
+    driver: bridge
+
+secrets:
+  db_password:
+    external: true
+  jwt_secret:
+    external: true
+  webhook_secret:
+    external: true
+  redis_password:
+    external: true
+  alchemy_api_key:
+    external: true
+
+# 说明：
+# - 请在生产环境提前用 Docker Secret 或平台 Secret 管理器创建上面列出的 secrets，
+#   然后再使用 `docker stack deploy` 或适配你的部署方式来启动服务。
+# - `env_file: .env.prod` 用于存放非敏感的运行时配置（不可含明文 secret），推荐使用平台环境变量或 Secret 管理。
+# - 如果你使用反向代理（nginx/traefik）或负载均衡器，请将其连接到 `internal` 网络并通过该网络访问 `backend` 服务。

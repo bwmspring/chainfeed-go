@@ -1,3 +1,40 @@
+## 部署（Vercel）
+
+推荐使用 Vercel 部署 `frontend` 目录的 Next.js 应用。下面为最少可行的步骤与环境变量示例。
+
+1. 连接仓库
+   - 在 Vercel 控制台创建新项目，选择你的仓库。Import 时把 Root Directory 设置为 `frontend`（如果仓库包含后端）。
+
+2. 必填环境变量（在 Vercel → Project → Settings → Environment Variables 添加）
+   - `NEXT_PUBLIC_API_URL` = https://api.example.com
+   - `NEXT_PUBLIC_WS_URL` = wss://api.example.com/ws
+   - `NEXT_PUBLIC_FRONTEND_URL` = https://app.example.com
+
+3. 可选/构建时环境变量（Server-side，勿以 NEXT_PUBLIC_ 开头）
+   - `API_URL` = https://api.example.com
+   - `ALCHEMY_API_KEY` = <alchemy_key>（如果在 SSR 或构建时使用）
+
+4. 构建设置
+   - Install Command: `pnpm install`
+   - Build Command: `pnpm build`
+   - Output Directory: 留空（Next.js）
+
+5. 部署与本地验证
+```bash
+cd frontend
+pnpm install
+pnpm build
+pnpm start # 本地生产预览
+# Vercel 本地预览（需安装 vercel CLI）
+npx vercel dev
+```
+
+6. Preview 环境
+   - 在 Vercel 中对 `Preview` 分支也设置相应的环境变量，或允许 Preview 域名在后端 `CORS_ORIGINS` 中白名单。
+
+注意
+- 不要把 `JWT_SECRET`、`WEBHOOK_SECRET` 放到前端环境变量。
+- 若前端需直接访问第三方需要密钥的 API（如 Alchemy），优先使用后端代理以保护密钥。
 # ChainFeed Frontend
 
 ## 技术栈

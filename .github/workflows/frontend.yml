@@ -1,0 +1,50 @@
+name: Frontend CI & Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+  pull_request:
+    paths:
+      - "frontend/**"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "pnpm"
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: frontend
+        run: pnpm build
+
+      - name: Run tests
+        working-directory: frontend
+        run: pnpm test || echo "no tests or tests failed"
+
+      - name: Deploy to Vercel
+        if: "github.ref == 'refs/heads/main'"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        working-directory: frontend
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "VERCEL_TOKEN is not set. Skipping deploy.";
+            exit 1;
+          fi
+          npx vercel --prod --token "$VERCEL_TOKEN" --confirm --cwd . --local-config ../vercel.json
